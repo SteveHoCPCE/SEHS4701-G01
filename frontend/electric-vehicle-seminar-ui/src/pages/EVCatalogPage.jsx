@@ -1,6 +1,5 @@
 // src/pages/EVCatalogPage.jsx
 import { useState } from "react";
-import Footer from "../components/layout/Footer";
 
 const evModels = [
   {
@@ -312,7 +311,8 @@ export default function EVCatalogPage() {
         </div>
       )}
 
-      <Footer />
+      {/* 🔥 REMOVE THIS LINE - Footer is already in MainLayout */}
+      {/* <Footer /> */}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 // src/pages/HomePage.jsx
-import Footer from "../components/layout/Footer";
+import Footer from "../components/layout/Footer"; // ← REMOVE this line
 
 export default function HomePage() {
   return (
@@ -41,7 +41,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      <Footer />
+      {/* REMOVE THIS LINE */}
+      {/* <Footer /> */}
     </div>
   );
 }

@@ -1,14 +1,15 @@
-import React from "react";
+// src/components/layout/MainLayout.jsx
+import Navbar from "./Navbar";
+import Footer from "./Footer";
 import { Outlet } from "react-router-dom";
-import Navbar from "./Navbar.jsx";
-import Footer from "./Footer.jsx";
 
 const MainLayout = () => {
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {" "}
+      {/* Light theme background */}
       <Navbar />
-      <main style={{ padding: "20px" }}>
-        {/* The content of the current route will be rendered here */}
+      <main className="flex-1">
         <Outlet />
       </main>
       <Footer />

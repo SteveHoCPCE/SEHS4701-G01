@@ -1,65 +1,120 @@
 // src/context/AuthContext.jsx
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [registeredUsers, setRegisteredUsers] = useState([]); // stores full user data including password
+  const [user, setUser] = useState(null);
+  const [isVerified, setIsVerified] = useState(false);
+  const [myRegistrations, setMyRegistrations] = useState([]);
 
-  // Register - save full data including password
+  // Load data from localStorage when app starts
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    const savedVerified = localStorage.getItem("isVerified") === "true";
+    const savedRegistrations = JSON.parse(
+      localStorage.getItem("myRegistrations") || "[]",
+    );
+
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setIsVerified(savedVerified);
+    setMyRegistrations(savedRegistrations);
+  }, []);
+
+  const login = (email, password) => {
+    const savedUsers = JSON.parse(localStorage.getItem("users") || "[]");
+    const foundUser = savedUsers.find(
+      (u) => u.email === email && u.password === password,
+    );
+
+    if (foundUser) {
+      setUser(foundUser);
+      localStorage.setItem("user", JSON.stringify(foundUser));
+
+      const alreadyVerified = localStorage.getItem("isVerified") === "true";
+      setIsVerified(alreadyVerified);
+
+      return { success: true };
+    }
+    return { success: false, message: "Invalid email or password" };
+  };
+
   const register = (userData) => {
-    const emailLower = userData.email.toLowerCase().trim();
+    const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-    // Check if email already exists
-    if (registeredUsers.some((u) => u.email.toLowerCase() === emailLower)) {
-      return { success: false, message: "This email is already registered." };
+    if (users.some((u) => u.email === userData.email)) {
+      return { success: false, message: "User already exists" };
     }
 
-    setRegisteredUsers((prev) => [...prev, userData]);
-    setCurrentUser(userData);
+    users.push(userData);
+    localStorage.setItem("users", JSON.stringify(users));
+
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+
+    // New users start unverified
+    setIsVerified(false);
+    localStorage.setItem("isVerified", "false");
+
     return { success: true };
   };
 
-  // Login - compare password exactly
-  const login = (email, enteredPassword) => {
-    const normalizedEmail = email.toLowerCase().trim();
+  const completeVerification = () => {
+    setIsVerified(true);
+    localStorage.setItem("isVerified", "true");
+  };
 
-    // Find the registered user
-    const foundUser = registeredUsers.find(
-      (u) => u.email.toLowerCase() === normalizedEmail,
+  // ==================== REGISTRATION MANAGEMENT ====================
+  const addRegistration = (data) => {
+    const newRegistration = {
+      id: Date.now(),
+      seminar: data.seminar,
+      date: data.date,
+      time: data.time,
+      location: data.location,
+      seats: data.seats || 1,
+      registeredOn: new Date().toISOString(),
+      status: data.status || "Confirmed", // This line is crucial
+    };
+
+    const updated = [...myRegistrations, newRegistration];
+    setMyRegistrations(updated);
+    localStorage.setItem("myRegistrations", JSON.stringify(updated));
+
+    return newRegistration;
+  };
+
+  const cancelRegistration = (id) => {
+    const updated = myRegistrations.map((reg) =>
+      reg.id === id ? { ...reg, status: "Cancelled" } : reg,
     );
 
-    if (!foundUser) {
-      return {
-        success: false,
-        message: "This email is not registered. Please register first.",
-      };
-    }
-
-    // Compare password exactly (case sensitive)
-    if (foundUser.password !== enteredPassword) {
-      return {
-        success: false,
-        message: "Incorrect password. Please try again.",
-      };
-    }
-
-    // Login successful - use real registered data
-    setCurrentUser(foundUser);
-    return { success: true };
+    setMyRegistrations(updated);
+    localStorage.setItem("myRegistrations", JSON.stringify(updated));
   };
 
   const logout = () => {
-    setCurrentUser(null);
+    setUser(null);
+    setIsVerified(false);
+    setMyRegistrations([]);
+    localStorage.removeItem("user");
+    localStorage.removeItem("isVerified");
+    localStorage.removeItem("myRegistrations");
   };
 
   return (
     <AuthContext.Provider
       value={{
-        user: currentUser,
-        register,
+        user,
+        isVerified,
+        myRegistrations,
         login,
+        register,
+        completeVerification,
+        addRegistration,
+        cancelRegistration,
         logout,
       }}
     >

@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import Footer from "../components/layout/Footer";
 
 export default function VerificationPage() {
-  const { user } = useAuth(); // Get the current registered user
+  const { user, completeVerification } = useAuth(); // ← Added completeVerification
   const navigate = useNavigate();
 
   const [code, setCode] = useState(["", "", "", "", "", ""]);
@@ -14,7 +14,6 @@ export default function VerificationPage() {
 
   const inputRefs = useRef([]);
 
-  // Use the real email from registration, fallback if somehow null
   const userEmail = user?.email || "your.email@example.com";
 
   const handleChange = (index, value) => {
@@ -45,8 +44,13 @@ export default function VerificationPage() {
 
     setTimeout(() => {
       setIsVerifying(false);
+
+      // Mark user as verified in AuthContext
+      completeVerification(); // ← Important fix
+
       setShowSuccess(true);
 
+      // Redirect to protocol complete after success animation
       setTimeout(() => {
         navigate("/protocol-complete");
       }, 1800);
@@ -68,7 +72,6 @@ export default function VerificationPage() {
             IDENTITY VERIFICATION
           </h1>
 
-          {/* Dynamic Email */}
           <p className="text-center text-gray-400 mb-10">
             Transmission sent to{" "}
             <span className="text-cyan-400 font-medium">{userEmail}</span>
@@ -90,7 +93,7 @@ export default function VerificationPage() {
             ))}
           </div>
 
-          {/* Intercepted Signal Box */}
+          {/* Demo Code Box */}
           <div className="bg-[#1a1a2e] border border-cyan-500/30 rounded-2xl p-6 mb-10">
             <div className="flex items-center gap-3 text-cyan-400 mb-2">
               <span className="text-xl">⚡</span>
@@ -121,6 +124,9 @@ export default function VerificationPage() {
           </div>
         </div>
       </div>
+
+      {/* Optional Footer - Remove if using MainLayout */}
+      {/* <Footer /> */}
     </div>
   );
 }
