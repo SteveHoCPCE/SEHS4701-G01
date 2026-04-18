@@ -1,190 +1,213 @@
 // src/pages/RegisterPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { authService } from "../api/authService";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { register } = useAuth();
 
-  const [entityType, setEntityType] = useState("individual");
   const [formData, setFormData] = useState({
-    fullName: "",
-    phone: "",
+    name: "",
+    telephone: "",
     email: "",
-    organization: "",
     password: "",
     confirmPassword: "",
+    customerType: "PERSONAL",
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleProceed = () => {
-    // Validation
-    if (!formData.fullName.trim()) {
-      alert("Please enter your full name");
-      return;
-    }
-    if (!formData.phone.trim()) {
-      alert("Please enter your phone number");
-      return;
-    }
-    if (!formData.email.trim()) {
-      alert("Please enter your email address");
-      return;
-    }
-    if (entityType === "corporate" && !formData.organization.trim()) {
-      alert("Please enter your organization name");
-      return;
-    }
-    if (!formData.password) {
-      alert("Please enter a password");
-      return;
-    }
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
+      setLoading(false);
       return;
     }
+
     if (formData.password.length < 6) {
-      alert("Password must be at least 6 characters long");
+      setError("Password must be at least 6 characters");
+      setLoading(false);
       return;
     }
 
-    // Create user data
-    const userData = {
-      name: formData.fullName.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      type: entityType === "individual" ? "Personal" : "Corporate",
-      organization:
-        entityType === "corporate" ? formData.organization.trim() : "",
-      password: formData.password, // Save real password for login check
-    };
+    try {
+      await authService.register({
+        name: formData.name.trim(),
+        telephone: formData.telephone.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        customerType: formData.customerType,
+      });
 
-    const result = register(userData);
+      localStorage.setItem("pendingEmail", formData.email.trim());
 
-    if (result.success) {
-      alert("Registration successful! Proceeding to verification...");
+      alert(
+        "✅ Registration successful!\n\nPlease check your email for the 6-digit verification code.",
+      );
       navigate("/verify");
-    } else {
-      alert(result.message || "Registration failed");
+    } catch (err) {
+      console.error("Registration error:", err.response?.data);
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.errors?.[0] ||
+        "Registration failed. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 flex items-center justify-center px-6">
-      <div className="w-full max-w-2xl">
-        <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
-          {/* Header */}
-          <div className="text-center mb-10">
-            <div className="inline-block bg-emerald-500/10 text-emerald-400 text-xs px-4 py-1.5 rounded-full mb-4">
-              REGISTRATION NODE ACTIVE
-            </div>
-            <h1 className="text-4xl font-bold mb-2">INITIALIZE CLEARANCE</h1>
-            <p className="text-gray-400">
-              Create your digital identity to access the EV seminar nexus.
-            </p>
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center py-12 px-6">
+      <div className="w-full max-w-lg">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-[#1a1a2e] border border-cyan-500/30 rounded-full px-6 py-2 text-sm mb-6">
+            <span className="text-cyan-400">●</span>
+            REGISTRATION NODE ACTIVE
           </div>
-
-          {/* Entity Type Toggle */}
-          <div className="flex gap-3 mb-10">
-            <button
-              onClick={() => setEntityType("individual")}
-              className={`flex-1 py-4 rounded-2xl font-medium transition-all ${
-                entityType === "individual"
-                  ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,245,255,0.6)]"
-                  : "bg-gray-900 border border-gray-700 hover:bg-gray-800"
-              }`}
-            >
-              👤 INDIVIDUAL
-            </button>
-            <button
-              onClick={() => setEntityType("corporate")}
-              className={`flex-1 py-4 rounded-2xl font-medium transition-all ${
-                entityType === "corporate"
-                  ? "bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,245,255,0.6)]"
-                  : "bg-gray-900 border border-gray-700 hover:bg-gray-800"
-              }`}
-            >
-              🏢 CORPORATE
-            </button>
-          </div>
-
-          {/* Form Fields */}
-          <div className="space-y-6">
-            <input
-              name="fullName"
-              type="text"
-              placeholder="Enter full name *"
-              value={formData.fullName}
-              onChange={handleChange}
-              className="w-full bg-[#1a1a24] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500"
-            />
-
-            <input
-              name="phone"
-              type="tel"
-              placeholder="+86 138-0000-0000 *"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full bg-[#1a1a24] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500"
-            />
-
-            {entityType === "corporate" && (
-              <input
-                name="organization"
-                type="text"
-                placeholder="Enter organization name *"
-                value={formData.organization}
-                onChange={handleChange}
-                className="w-full bg-[#1a1a24] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500"
-              />
-            )}
-
-            <input
-              name="email"
-              type="email"
-              placeholder="your.email@example.com *"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full bg-[#1a1a24] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500"
-            />
-
-            <div className="grid grid-cols-2 gap-6">
-              <input
-                name="password"
-                type="password"
-                placeholder="Password (min 6 chars) *"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full bg-[#1a1a24] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500"
-              />
-              <input
-                name="confirmPassword"
-                type="password"
-                placeholder="Confirm password *"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full bg-[#1a1a24] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500"
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleProceed}
-            className="w-full mt-10 bg-cyan-500 hover:bg-cyan-600 text-black font-semibold py-4 rounded-2xl text-lg transition-all"
-          >
-            PROCEED TO VERIFICATION →
-          </button>
-
-          <p className="text-center text-xs text-gray-500 mt-6">
-            One-time 6-digit code will be sent to your email for verification
+          <h1 className="text-4xl font-bold mb-3">INITIALIZE CLEARANCE</h1>
+          <p className="text-gray-400 text-lg">
+            Create your digital identity to access the EV seminar nexus.
           </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-900/30 border border-red-500 text-red-400 px-6 py-4 rounded-2xl mb-8 text-center">
+            {error}
+          </div>
+        )}
+
+        <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
+          <form onSubmit={handleRegister} className="space-y-8">
+            <div>
+              <label className="block text-sm text-gray-400 mb-3">
+                ENTITY CLASSIFICATION *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, customerType: "PERSONAL" })
+                  }
+                  className={`py-4 rounded-2xl border flex items-center justify-center gap-3 transition-all ${
+                    formData.customerType === "PERSONAL"
+                      ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                      : "border-gray-700 hover:border-gray-600"
+                  }`}
+                >
+                  👤 INDIVIDUAL
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, customerType: "COMPANY" })
+                  }
+                  className={`py-4 rounded-2xl border flex items-center justify-center gap-3 transition-all ${
+                    formData.customerType === "COMPANY"
+                      ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
+                      : "border-gray-700 hover:border-gray-600"
+                  }`}
+                >
+                  🏢 CORPORATE
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                DESIGNATION *
+              </label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Enter full name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                COMMLINK *
+              </label>
+              <input
+                type="tel"
+                name="telephone"
+                placeholder="+86 138-0000-0000"
+                value={formData.telephone}
+                onChange={handleChange}
+                required
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                NETWORK ADDRESS *
+              </label>
+              <input
+                type="email"
+                name="email"
+                placeholder="your.email@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  SECURITY KEY *
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Min. 6 characters"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  VERIFY KEY *
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  placeholder="Re-enter security key"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl transition-all text-lg mt-6"
+            >
+              {loading
+                ? "PROCESSING CLEARANCE..."
+                : "PROCEED TO VERIFICATION →"}
+            </button>
+          </form>
         </div>
       </div>
     </div>

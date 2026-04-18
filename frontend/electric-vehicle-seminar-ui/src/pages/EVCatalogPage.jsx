@@ -1,5 +1,6 @@
 // src/pages/EVCatalogPage.jsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const evModels = [
   {
@@ -125,6 +126,7 @@ const evModels = [
 ];
 
 export default function EVCatalogPage() {
+  const navigate = useNavigate();
   const [selectedCar, setSelectedCar] = useState(null);
 
   return (
@@ -176,25 +178,14 @@ export default function EVCatalogPage() {
                   {car.desc}
                 </p>
 
-                <div className="grid grid-cols-2 gap-3 text-sm mb-8">
-                  <div>
-                    Range: <span className="font-medium">{car.range}</span>
-                  </div>
-                  <div>
-                    Top Speed:{" "}
-                    <span className="font-medium">{car.topSpeed}</span>
-                  </div>
-                  <div>
-                    0-100: <span className="font-medium">{car.accel}</span>
-                  </div>
-                  <div>
-                    Efficiency:{" "}
-                    <span className="font-medium">{car.efficiency}</span>
-                  </div>
-                </div>
-
-                <button className="w-full py-4 border border-gray-700 hover:border-cyan-400 rounded-2xl font-medium transition-colors">
-                  ACCESS DETAILS →
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent opening modal
+                    navigate("/seminar-register"); // Go to seminar registration
+                  }}
+                  className="w-full py-4 border border-gray-700 hover:border-cyan-400 rounded-2xl font-medium transition-colors"
+                >
+                  REGISTER FOR SEMINAR
                 </button>
               </div>
             </div>
@@ -202,25 +193,22 @@ export default function EVCatalogPage() {
         </div>
       </div>
 
-      {/* Detailed Modal */}
+      {/* Modal */}
       {selectedCar && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6">
           <div className="bg-[#12121a] border border-cyan-500/30 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            {/* Image Header */}
             <div className="relative h-80">
               <img
                 src={selectedCar.image}
                 alt={selectedCar.name}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute top-6 right-6">
-                <button
-                  onClick={() => setSelectedCar(null)}
-                  className="bg-black/70 text-white px-5 py-2 rounded-full text-sm hover:bg-black transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+              <button
+                onClick={() => setSelectedCar(null)}
+                className="absolute top-6 right-6 bg-black/70 text-white px-5 py-2 rounded-full text-sm hover:bg-black transition-colors"
+              >
+                Close
+              </button>
             </div>
 
             <div className="p-10">
@@ -296,11 +284,7 @@ export default function EVCatalogPage() {
 
               <div className="mt-12 flex justify-center">
                 <button
-                  onClick={() =>
-                    alert(
-                      `Seminar registration for ${selectedCar.name} coming soon!`,
-                    )
-                  }
+                  onClick={() => navigate("/seminar-register")}
                   className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold px-12 py-4 rounded-2xl text-lg transition-all"
                 >
                   REGISTER FOR SEMINAR
@@ -310,9 +294,6 @@ export default function EVCatalogPage() {
           </div>
         </div>
       )}
-
-      {/* 🔥 REMOVE THIS LINE - Footer is already in MainLayout */}
-      {/* <Footer /> */}
     </div>
   );
 }

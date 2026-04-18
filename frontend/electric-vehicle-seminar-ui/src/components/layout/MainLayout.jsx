@@ -1,13 +1,11 @@
 // src/components/layout/MainLayout.jsx
+import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import { Outlet } from "react-router-dom";
 
-const MainLayout = () => {
+export default function MainLayout() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {" "}
-      {/* Light theme background */}
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
       <main className="flex-1">
         <Outlet />
@@ -15,6 +13,4 @@ const MainLayout = () => {
       <Footer />
     </div>
   );
-};
-
-export default MainLayout;
+}

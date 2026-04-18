@@ -4,90 +4,72 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtocolCompletePage() {
-  const { user, isVerified } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
-    // If user is already verified, go directly to dashboard
-    if (isVerified) {
-      navigate("/dashboard", { replace: true });
-      return;
-    }
-
-    // Mark as verified
-    // (We already call this from VerificationPage, but double protection)
-    // completeVerification();   // optional
-
+    // Auto redirect to dashboard after 3 seconds
     const timer = setTimeout(() => {
       navigate("/dashboard", { replace: true });
-    }, 3500);
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, [navigate, isVerified]);
+  }, [navigate]);
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        Please login first
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
       </div>
     );
   }
 
-  const displayName = user?.name || "User";
-  const displayEmail = user?.email || "your.email@example.com";
-
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center pt-20">
-      <div className="w-full max-w-md px-6">
-        <div className="bg-[#12121a] border border-cyan-500/30 rounded-3xl p-12 text-center shadow-2xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-transparent pointer-events-none" />
-
-          <div className="mx-auto w-24 h-24 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center mb-10 shadow-[0_0_40px_rgba(0,245,255,0.6)]">
-            <span className="text-6xl">✅</span>
-          </div>
-
-          <h1 className="text-4xl font-bold text-cyan-400 tracking-tight mb-3">
-            PROTOCOL COMPLETE
-          </h1>
-
-          <p className="text-gray-300 text-lg leading-relaxed mb-12">
-            Clearance granted. Your identity profile has been successfully
-            integrated into the nexus.
-          </p>
-
-          <div className="bg-[#1a1a24] rounded-2xl p-7 mb-12 text-left border border-gray-800">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-10 h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center text-xl">
-                👤
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">ID</p>
-                <p className="font-semibold text-white">{displayName}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center text-xl">
-                ✉️
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">NETWORK ADDRESS</p>
-                <p className="font-medium text-cyan-300">{displayEmail}</p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-black font-bold py-5 rounded-2xl text-lg shadow-[0_0_25px_rgba(0,245,255,0.5)] transition-all active:scale-95"
-          >
-            ENTER NEXUS →
-          </button>
-
-          <p className="text-xs text-gray-500 mt-8">
-            Redirecting to dashboard automatically...
-          </p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+      <div className="max-w-lg w-full bg-white rounded-3xl shadow-xl p-12 text-center">
+        {/* Success Icon */}
+        <div className="mx-auto w-28 h-28 bg-green-100 rounded-full flex items-center justify-center mb-8">
+          <span className="text-7xl">🎉</span>
         </div>
+
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Welcome to the Nexus!
+        </h1>
+
+        <p className="text-xl text-gray-600 mb-8">
+          Your account has been successfully verified.
+        </p>
+
+        <div className="bg-gray-50 rounded-2xl p-6 mb-10 text-left">
+          <p className="text-sm text-gray-500 mb-3">Account Details</p>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Name:</span>
+              <span className="font-medium">{user.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Email:</span>
+              <span className="font-medium">{user.email}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Customer Type:</span>
+              <span className="font-medium">
+                {user.customerType || "PERSONAL"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-gray-500 mb-8">
+          You will be redirected to your dashboard shortly...
+        </p>
+
+        <button
+          onClick={() => navigate("/dashboard", { replace: true })}
+          className="w-full bg-black hover:bg-gray-900 text-white font-semibold py-4 rounded-2xl transition-all"
+        >
+          Go to Dashboard Now
+        </button>
       </div>
     </div>
   );

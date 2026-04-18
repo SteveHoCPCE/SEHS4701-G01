@@ -1,132 +1,163 @@
 // src/pages/VerificationPage.jsx
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import Footer from "../components/layout/Footer";
+import { authService } from "../api/authService";
 
 export default function VerificationPage() {
-  const { user, completeVerification } = useAuth(); // ← Added completeVerification
   const navigate = useNavigate();
+  const { completeVerification } = useAuth();
 
-  const [code, setCode] = useState(["", "", "", "", "", ""]);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const inputRefs = useRef([]);
 
-  const userEmail = user?.email || "your.email@example.com";
+  // Focus first input when component mounts
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
 
-  const handleChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) return;
 
-    const newCode = [...code];
-    newCode[index] = value;
-    setCode(newCode);
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
 
+    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index, e) => {
-    if (e.key === "Backspace" && !code[index] && index > 0) {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
   };
 
-  const handleVerify = () => {
-    if (code.join("").length !== 6) {
-      alert("Please enter all 6 digits");
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").slice(0, 6);
+    if (/^\d+$/.test(pasted)) {
+      const newOtp = pasted.split("");
+      setOtp(newOtp);
+      inputRefs.current[5]?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    const otpCode = otp.join("").trim();
+
+    if (otpCode.length !== 6) {
+      setError("Please enter the complete 6-digit code");
       return;
     }
 
-    setIsVerifying(true);
+    setLoading(true);
+    setError("");
 
-    setTimeout(() => {
-      setIsVerifying(false);
+    try {
+      // Call backend to verify OTP
+      await authService.verifyEmail({
+        email: localStorage.getItem("pendingEmail") || "",
+        otpCode,
+      });
 
-      // Mark user as verified in AuthContext
-      completeVerification(); // ← Important fix
+      setSuccess(true);
+      completeVerification(); // Update AuthContext
 
-      setShowSuccess(true);
-
-      // Redirect to protocol complete after success animation
+      // Redirect after success
       setTimeout(() => {
         navigate("/protocol-complete");
-      }, 1800);
-    }, 1500);
+      }, 1500);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          "Invalid or expired verification code. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = () => {
+    alert(
+      "Resend OTP feature is not implemented yet.\n\nYou can check your email or database for the latest OTP.",
+    );
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center pt-20 pb-16">
-      <div className="w-full max-w-md px-6">
-        <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10 shadow-2xl">
-          {/* Icon */}
-          <div className="flex justify-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(0,245,255,0.6)]">
-              🛡️
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-6">
+      <div className="max-w-md w-full bg-white rounded-3xl shadow-xl p-10">
+        {!success ? (
+          <>
+            <div className="text-center mb-10">
+              <div className="mx-auto w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mb-6">
+                <span className="text-4xl">🔑</span>
+              </div>
+              <h2 className="text-3xl font-bold">Email Verification</h2>
+              <p className="text-gray-600 mt-3">
+                Enter the 6-digit verification code sent to your email
+              </p>
             </div>
-          </div>
 
-          <h1 className="text-3xl font-bold text-center text-white mb-2">
-            IDENTITY VERIFICATION
-          </h1>
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-5 py-4 rounded-2xl mb-6 text-center text-sm">
+                {error}
+              </div>
+            )}
 
-          <p className="text-center text-gray-400 mb-10">
-            Transmission sent to{" "}
-            <span className="text-cyan-400 font-medium">{userEmail}</span>
-          </p>
-
-          {/* 6-Digit Inputs */}
-          <div className="flex justify-center gap-4 mb-12">
-            {code.map((digit, index) => (
-              <input
-                key={index}
-                ref={(el) => (inputRefs.current[index] = el)}
-                type="text"
-                maxLength="1"
-                value={digit}
-                onChange={(e) => handleChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className="w-14 h-14 text-center text-4xl font-mono bg-[#1a1a24] border border-gray-700 rounded-2xl focus:border-cyan-400 focus:outline-none text-white caret-cyan-400"
-              />
-            ))}
-          </div>
-
-          {/* Demo Code Box */}
-          <div className="bg-[#1a1a2e] border border-cyan-500/30 rounded-2xl p-6 mb-10">
-            <div className="flex items-center gap-3 text-cyan-400 mb-2">
-              <span className="text-xl">⚡</span>
-              <span className="text-sm font-medium">INTERCEPTED SIGNAL</span>
+            {/* OTP Input Fields */}
+            <div className="flex justify-center gap-4 mb-10">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => (inputRefs.current[index] = el)}
+                  type="text"
+                  maxLength="1"
+                  value={digit}
+                  onChange={(e) => handleOtpChange(index, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onPaste={handlePaste}
+                  className="w-14 h-14 text-center text-3xl font-semibold border-2 border-gray-300 rounded-2xl focus:border-blue-600 focus:outline-none transition-all"
+                />
+              ))}
             </div>
-            <div className="font-mono text-xl text-cyan-300">
-              Auth Code: <span className="font-bold text-white">467323</span>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">Demo code for testing</p>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate("/register")}
-              className="flex-1 py-4 border border-gray-700 text-gray-400 rounded-2xl hover:bg-gray-900 transition-colors font-medium"
-            >
-              ABORT
-            </button>
 
             <button
               onClick={handleVerify}
-              disabled={isVerifying || code.join("").length !== 6}
-              className="flex-1 py-4 bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold rounded-2xl transition-all disabled:cursor-not-allowed"
+              disabled={loading || otp.join("").length !== 6}
+              className="w-full bg-black hover:bg-gray-900 disabled:bg-gray-400 text-white font-semibold py-4 rounded-2xl transition-all"
             >
-              {isVerifying ? "VERIFYING..." : "VERIFY"}
+              {loading ? "Verifying..." : "Verify Email"}
             </button>
-          </div>
-        </div>
-      </div>
 
-      {/* Optional Footer - Remove if using MainLayout */}
-      {/* <Footer /> */}
+            <div className="text-center mt-8">
+              <button
+                onClick={handleResend}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                Didn't receive the code? Resend OTP
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Success State */
+          <div className="text-center py-12">
+            <div className="mx-auto w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-8">
+              <span className="text-6xl">🎉</span>
+            </div>
+            <h2 className="text-3xl font-bold text-green-700 mb-3">
+              Verification Successful!
+            </h2>
+            <p className="text-gray-600">Redirecting you to the next step...</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

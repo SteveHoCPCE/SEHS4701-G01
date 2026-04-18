@@ -1,64 +1,66 @@
 // src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
+import { authService } from "../api/authService";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isVerified, setIsVerified] = useState(false);
+  const [token, setToken] = useState(null);
   const [myRegistrations, setMyRegistrations] = useState([]);
+  const [isVerified, setIsVerified] = useState(false);
 
-  // Load data from localStorage when app starts
+  // Load from localStorage on mount
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
+    const savedToken = localStorage.getItem("token");
     const savedVerified = localStorage.getItem("isVerified") === "true";
     const savedRegistrations = JSON.parse(
       localStorage.getItem("myRegistrations") || "[]",
     );
 
-    if (savedUser) {
+    if (savedUser && savedToken) {
       setUser(JSON.parse(savedUser));
+      setToken(savedToken);
+      setIsVerified(savedVerified);
+      setMyRegistrations(savedRegistrations);
     }
-    setIsVerified(savedVerified);
-    setMyRegistrations(savedRegistrations);
   }, []);
 
-  const login = (email, password) => {
-    const savedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const foundUser = savedUsers.find(
-      (u) => u.email === email && u.password === password,
-    );
+  const login = async (email, password) => {
+    try {
+      const response = await authService.login({ email, password });
 
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem("user", JSON.stringify(foundUser));
+      const userData = response.data;
+      const jwtToken = userData.token;
 
-      const alreadyVerified = localStorage.getItem("isVerified") === "true";
-      setIsVerified(alreadyVerified);
+      setUser(userData);
+      setToken(jwtToken);
+      setIsVerified(true);
+
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("token", jwtToken);
+      localStorage.setItem("isVerified", "true");
 
       return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Login failed",
+      };
     }
-    return { success: false, message: "Invalid email or password" };
   };
 
-  const register = (userData) => {
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-
-    if (users.some((u) => u.email === userData.email)) {
-      return { success: false, message: "User already exists" };
+  const register = async (userData) => {
+    try {
+      await authService.register(userData);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || "Registration failed",
+      };
     }
-
-    users.push(userData);
-    localStorage.setItem("users", JSON.stringify(users));
-
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
-
-    // New users start unverified
-    setIsVerified(false);
-    localStorage.setItem("isVerified", "false");
-
-    return { success: true };
   };
 
   const completeVerification = () => {
@@ -66,40 +68,33 @@ export function AuthProvider({ children }) {
     localStorage.setItem("isVerified", "true");
   };
 
-  // ==================== REGISTRATION MANAGEMENT ====================
-  const addRegistration = (data) => {
-    const newRegistration = {
-      id: Date.now(),
-      seminar: data.seminar,
-      date: data.date,
-      time: data.time,
-      location: data.location,
-      seats: data.seats || 1,
-      registeredOn: new Date().toISOString(),
-      status: data.status || "Confirmed", // This line is crucial
-    };
-
-    const updated = [...myRegistrations, newRegistration];
-    setMyRegistrations(updated);
-    localStorage.setItem("myRegistrations", JSON.stringify(updated));
-
-    return newRegistration;
+  const addRegistration = (newRegistration) => {
+    const updatedRegistrations = [...myRegistrations, newRegistration];
+    setMyRegistrations(updatedRegistrations);
+    localStorage.setItem(
+      "myRegistrations",
+      JSON.stringify(updatedRegistrations),
+    );
   };
 
-  const cancelRegistration = (id) => {
+  const cancelRegistration = (registrationId) => {
     const updated = myRegistrations.map((reg) =>
-      reg.id === id ? { ...reg, status: "Cancelled" } : reg,
+      reg.id === registrationId || reg.seminarId === registrationId
+        ? { ...reg, status: "Cancelled" }
+        : reg,
     );
-
     setMyRegistrations(updated);
     localStorage.setItem("myRegistrations", JSON.stringify(updated));
   };
 
   const logout = () => {
     setUser(null);
-    setIsVerified(false);
+    setToken(null);
     setMyRegistrations([]);
+    setIsVerified(false);
+
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     localStorage.removeItem("isVerified");
     localStorage.removeItem("myRegistrations");
   };
@@ -108,6 +103,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
+        token,
         isVerified,
         myRegistrations,
         login,
