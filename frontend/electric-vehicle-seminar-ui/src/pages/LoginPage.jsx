@@ -1,11 +1,13 @@
 // src/pages/LoginPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // ← Important
 import { authService } from "../api/authService";
 import { Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login: contextLogin } = useAuth(); // Get login from context
 
   const [formData, setFormData] = useState({
     email: "",
@@ -26,15 +28,35 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const response = await authService.login(formData);
+      console.log("Attempting login with:", formData.email);
 
+      const response = await authService.login({
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
+
+      // Save to localStorage
       localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          email: response.data.email,
+          name: response.data.name || "User",
+        }),
+      );
 
-      alert("Login successful! Welcome back.");
-      navigate("/dashboard");
+      // Update AuthContext
+      contextLogin({
+        email: response.data.email,
+        name: response.data.name || "User",
+      });
+
+      console.log("Login successful! Redirecting to dashboard...");
+      navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password");
+      console.error("Login error:", err.response?.data || err.message);
+      const serverMsg = err.response?.data?.message;
+      setError(serverMsg || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -43,7 +65,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center py-12 px-6">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-[#1a1a2e] border border-cyan-500/30 rounded-full px-6 py-2 text-sm mb-6">
             <span className="text-cyan-400">●</span>
@@ -63,7 +84,6 @@ export default function LoginPage() {
 
         <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
           <form onSubmit={handleLogin} className="space-y-8">
-            {/* Network Address (Email) */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">
                 NETWORK ADDRESS
@@ -85,7 +105,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Security Key (Password) */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">
                 SECURITY KEY
@@ -114,7 +133,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Authenticate Button */}
             <button
               type="submit"
               disabled={loading}
@@ -124,9 +142,8 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Link to Register */}
           <p className="text-center text-gray-500 text-sm mt-8">
-            Unregistered entity?{" "}
+            New to the system?{" "}
             <span
               onClick={() => navigate("/register")}
               className="text-cyan-400 hover:underline cursor-pointer"

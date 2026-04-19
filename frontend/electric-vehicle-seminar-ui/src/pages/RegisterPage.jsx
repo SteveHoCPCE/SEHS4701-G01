@@ -12,7 +12,7 @@ export default function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
-    customerType: "PERSONAL",
+    customerType: "PERSONAL", // Must be "PERSONAL" or "COMPANY"
   });
 
   const [loading, setLoading] = useState(false);
@@ -45,22 +45,20 @@ export default function RegisterPage() {
         telephone: formData.telephone.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
-        customerType: formData.customerType,
+        customerType: formData.customerType, // Must be PERSONAL or COMPANY
       });
 
       localStorage.setItem("pendingEmail", formData.email.trim());
 
       alert(
-        "✅ Registration successful!\n\nPlease check your email for the 6-digit verification code.",
+        "✅ Registration successful!\n\nPlease check your email for the 6-digit code.",
       );
-      navigate("/verify");
+      navigate("/verify", { state: { email: formData.email.trim() } });
     } catch (err) {
-      console.error("Registration error:", err.response?.data);
       const msg =
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0] ||
-        "Registration failed. Please try again.";
+        err.response?.data?.message || "Registration failed. Please try again.";
       setError(msg);
+      console.error("Register error:", err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -87,75 +85,54 @@ export default function RegisterPage() {
         )}
 
         <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
-          <form onSubmit={handleRegister} className="space-y-8">
+          <form onSubmit={handleRegister} className="space-y-6">
             <div>
-              <label className="block text-sm text-gray-400 mb-3">
-                ENTITY CLASSIFICATION *
+              <label className="block text-sm text-gray-400 mb-2">
+                CUSTOMER TYPE
               </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData({ ...formData, customerType: "PERSONAL" })
-                  }
-                  className={`py-4 rounded-2xl border flex items-center justify-center gap-3 transition-all ${
-                    formData.customerType === "PERSONAL"
-                      ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
-                      : "border-gray-700 hover:border-gray-600"
-                  }`}
-                >
-                  👤 INDIVIDUAL
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData({ ...formData, customerType: "COMPANY" })
-                  }
-                  className={`py-4 rounded-2xl border flex items-center justify-center gap-3 transition-all ${
-                    formData.customerType === "COMPANY"
-                      ? "border-cyan-500 bg-cyan-500/10 text-cyan-400"
-                      : "border-gray-700 hover:border-gray-600"
-                  }`}
-                >
-                  🏢 CORPORATE
-                </button>
-              </div>
+              <select
+                name="customerType"
+                value={formData.customerType}
+                onChange={handleChange}
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white"
+              >
+                <option value="PERSONAL">PERSONAL (Individual)</option>
+                <option value="COMPANY">COMPANY (Corporate)</option>
+              </select>
             </div>
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                DESIGNATION *
+                FULL NAME
               </label>
               <input
                 type="text"
                 name="name"
-                placeholder="Enter full name"
+                placeholder="Enter your full name"
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
               />
             </div>
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">
-                COMMLINK *
+                TELEPHONE
               </label>
               <input
                 type="tel"
                 name="telephone"
-                placeholder="+86 138-0000-0000"
+                placeholder="91234567"
                 value={formData.telephone}
                 onChange={handleChange}
                 required
-                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                NETWORK ADDRESS *
-              </label>
+              <label className="block text-sm text-gray-400 mb-2">EMAIL</label>
               <input
                 type="email"
                 name="email"
@@ -163,49 +140,46 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  SECURITY KEY *
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Min. 6 characters"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  VERIFY KEY *
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="Re-enter security key"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
-                />
-              </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                PASSWORD
+              </label>
+              <input
+                type="password"
+                name="password"
+                placeholder="Min 6 characters"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">
+                CONFIRM PASSWORD
+              </label>
+              <input
+                type="password"
+                name="confirmPassword"
+                placeholder="Re-enter password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl transition-all text-lg mt-6"
+              className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl text-lg mt-6"
             >
-              {loading
-                ? "PROCESSING CLEARANCE..."
-                : "PROCEED TO VERIFICATION →"}
+              {loading ? "PROCESSING..." : "PROCEED TO VERIFICATION →"}
             </button>
           </form>
         </div>
