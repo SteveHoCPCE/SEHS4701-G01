@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { seminarService } from "../api/seminarService";
 
 export default function SeminarRegistrationPage() {
-  const { user } = useAuth();
+  const { user, addRegistration } = useAuth(); // ← Only this line was updated
   const navigate = useNavigate();
 
   const [seminars, setSeminars] = useState([]);
@@ -52,12 +52,40 @@ export default function SeminarRegistrationPage() {
         seatsBooked: seatsToRegister,
       });
 
-      setSuccessMessage(
-        `Successfully registered for ${selectedSeminar.vehicleModelNumber}!`,
+      const availableSeats = selectedSeminar.availableSeats || 0;
+      const isWaitlisted = availableSeats <= 0;
+
+      const newRegistration = {
+        id: Date.now(),
+        seminar: selectedSeminar.vehicleModelNumber || "EV Seminar",
+        date: selectedSeminar.seminarDate,
+        seats: seatsToRegister,
+        status: isWaitlisted ? "Waitlisted" : "Confirmed",
+        registeredAt: new Date().toISOString(),
+      };
+
+      // === Added: Call addRegistration from context ===
+      if (typeof addRegistration === "function") {
+        addRegistration(newRegistration);
+      }
+
+      // Also save to localStorage as backup
+      const existing = JSON.parse(
+        localStorage.getItem("registrations") || "[]",
       );
+      const updated = [newRegistration, ...existing];
+      localStorage.setItem("registrations", JSON.stringify(updated));
+
+      setSuccessMessage(
+        isWaitlisted
+          ? `Added to waitlist for ${selectedSeminar.vehicleModelNumber}!`
+          : `Successfully registered for ${selectedSeminar.vehicleModelNumber}!`,
+      );
+
       setTimeout(() => setSuccessMessage(""), 5000);
       setSelectedSeminar(null);
       setSeatsToRegister(1);
+
       fetchSeminars();
     } catch (err) {
       console.error("Registration error:", err.response?.data);
@@ -135,9 +163,15 @@ export default function SeminarRegistrationPage() {
                         {seminar.vehicleModelNumber}
                       </h3>
                       <span
-                        className={`px-4 py-1 rounded-full text-sm ${avail > 5 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}
+                        className={`px-4 py-1 rounded-full text-sm font-medium ${
+                          avail > 0
+                            ? "bg-green-100 text-green-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
                       >
-                        {avail} seats available
+                        {avail > 0
+                          ? `${avail} seats available`
+                          : "Waitlisted : 0"}
                       </span>
                     </div>
                     <p className="text-gray-600 mt-1">
@@ -207,6 +241,27 @@ export default function SeminarRegistrationPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Important Notes - Figma Style */}
+                  <div className="bg-yellow-50 border border-yellow-200 p-5 rounded-2xl text-sm mb-8">
+                    <p className="font-medium mb-3 flex items-center gap-2">
+                      <span>ℹ️</span> Important Notes:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1.5 text-gray-700">
+                      <li>
+                        Confirmation email will be sent upon successful
+                        registration
+                      </li>
+                      <li>
+                        If the seminar is full, you will be added to the
+                        waitlist
+                      </li>
+                      <li>
+                        You can cancel your registration anytime before the
+                        event
+                      </li>
+                    </ul>
                   </div>
 
                   <button

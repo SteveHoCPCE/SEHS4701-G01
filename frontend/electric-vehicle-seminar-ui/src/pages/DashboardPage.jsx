@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, registrations = [] } = useAuth(); // ← Only this line was slightly updated
   const navigate = useNavigate();
 
   if (!user) {
@@ -13,6 +13,15 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  // Calculate real statistics (Added this block)
+  const totalRegistrations = registrations.length;
+  const confirmed = registrations.filter(
+    (reg) => reg.status === "Confirmed",
+  ).length;
+  const waitlisted = registrations.filter(
+    (reg) => reg.status === "Waitlisted",
+  ).length;
 
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-16">
@@ -82,21 +91,27 @@ export default function DashboardPage() {
 
           {/* Right Column - Statistics */}
           <div className="lg:col-span-4 space-y-8">
-            {/* Your Statistics */}
+            {/* Your Statistics - Now using real data */}
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
               <h3 className="font-semibold text-xl mb-6">Your Statistics</h3>
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Total Registrations</span>
-                  <span className="text-2xl font-bold text-blue-600">0</span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {totalRegistrations}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Confirmed</span>
-                  <span className="text-2xl font-bold text-green-600">0</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    {confirmed}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Waitlisted</span>
-                  <span className="text-2xl font-bold text-amber-600">0</span>
+                  <span className="text-2xl font-bold text-amber-600">
+                    {waitlisted}
+                  </span>
                 </div>
               </div>
             </div>
