@@ -1,12 +1,11 @@
 // src/pages/VerificationPage.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { authService } from "../api/authService";
 
 export default function VerificationPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { completeVerification } = useAuth(); // Use this from context
 
   const email =
     location.state?.email || localStorage.getItem("pendingEmail") || "";
@@ -28,13 +27,14 @@ export default function VerificationPage() {
     setOtp(newOtp);
 
     if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      if (nextInput) nextInput.focus();
+      const next = document.getElementById(`otp-${index + 1}`);
+      next?.focus();
     }
   };
 
   const handleVerify = async () => {
     const otpCode = otp.join("").trim();
+
     if (otpCode.length !== 6) {
       setError("Please enter all 6 digits");
       return;
@@ -44,19 +44,17 @@ export default function VerificationPage() {
     setError("");
 
     try {
-      // Call backend verification
-      // If backend succeeds, we mark user as verified locally
-      // (we don't rely on backend response for "verified" status in frontend)
+      console.log("Sending OTP:", otpCode, "for email:", email);
 
-      // Simulate success or call real API
-      // await verifyEmail(email, otpCode);   // you can uncomment if you want real call
-
-      // Mark as verified in context + localStorage
-      completeVerification();
+      await authService.verifyEmail({
+        email: email,
+        otpCode: otpCode,
+      });
 
       alert("✅ Email verified successfully!");
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      console.error("Verification error:", err.response?.data || err);
       setError("Invalid or expired verification code. Please try again.");
     } finally {
       setLoading(false);
@@ -65,9 +63,8 @@ export default function VerificationPage() {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData("text").slice(0, 6);
-    const newOtp = pastedData.split("").slice(0, 6);
-    setOtp([...newOtp, ...Array(6 - newOtp.length).fill("")]);
+    const pasted = e.clipboardData.getData("text").slice(0, 6);
+    setOtp(pasted.split("").concat(Array(6 - pasted.length).fill("")));
   };
 
   return (
@@ -78,7 +75,9 @@ export default function VerificationPage() {
             <span className="text-cyan-400">●</span>
             EMAIL VERIFICATION
           </div>
-          <h1 className="text-4xl font-bold mb-3">VERIFY YOUR EMAIL</h1>
+          <h1 className="text-4xl font-bold mb-3 text-white">
+            VERIFY YOUR EMAIL
+          </h1>
           <p className="text-gray-400">
             We sent a 6-digit code to
             <br />
@@ -94,7 +93,7 @@ export default function VerificationPage() {
 
         <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
           <div
-            className="flex justify-center gap-4 mb-10"
+            className="flex justify-center gap-3 mb-10"
             onPaste={handlePaste}
           >
             {otp.map((digit, index) => (
@@ -113,7 +112,7 @@ export default function VerificationPage() {
           <button
             onClick={handleVerify}
             disabled={loading || otp.join("").length !== 6}
-            className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl transition-all text-lg"
+            className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl text-lg transition-all"
           >
             {loading ? "VERIFYING..." : "VERIFY EMAIL"}
           </button>
