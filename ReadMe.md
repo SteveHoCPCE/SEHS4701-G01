@@ -67,7 +67,9 @@ password: "your-mysql-password"
 
 mail:
 
-host: smtp.gmail.com port: 587 username: ${MAIL_USERNAME=your_google_email} password: ${MAIL_PASSWORD=16-digit passcode from app password without blank space}
+host: smtp.gmail.com port: 587
+username: ${MAIL_USERNAME=your_google_email}
+password: ${MAIL_PASSWORD=16-digit passcode from app password without blank space}
 ```
 
 # Step by step:
