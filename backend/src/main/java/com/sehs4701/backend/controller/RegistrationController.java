@@ -23,6 +23,8 @@ public class RegistrationController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long seminarId,
             @Valid @RequestBody SeminarRegistrationRequest request) {
+        
+        // userDetails.getUsername() returns the email from JWT
         return ResponseEntity.ok(
                 registrationService.register(userDetails.getUsername(), seminarId, request.getSeatsBooked()));
     }

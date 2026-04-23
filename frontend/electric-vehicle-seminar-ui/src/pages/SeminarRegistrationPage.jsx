@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { seminarService } from "../api/seminarService";
 
 export default function SeminarRegistrationPage() {
-  const { user, addRegistration } = useAuth(); // ← Only this line was updated
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [seminars, setSeminars] = useState([]);
@@ -48,54 +48,33 @@ export default function SeminarRegistrationPage() {
     setSuccessMessage("");
 
     try {
-      await seminarService.registerForSeminar(selectedSeminar.id, {
-        seatsBooked: seatsToRegister,
-      });
-
-      const availableSeats = selectedSeminar.availableSeats || 0;
-      const isWaitlisted = availableSeats <= 0;
-
-      const newRegistration = {
-        id: Date.now(),
-        seminar: selectedSeminar.vehicleModelNumber || "EV Seminar",
-        date: selectedSeminar.seminarDate,
-        seats: seatsToRegister,
-        status: isWaitlisted ? "Waitlisted" : "Confirmed",
-        registeredAt: new Date().toISOString(),
-      };
-
-      // === Added: Call addRegistration from context ===
-      if (typeof addRegistration === "function") {
-        addRegistration(newRegistration);
-      }
-
-      // Also save to localStorage as backup
-      const existing = JSON.parse(
-        localStorage.getItem("registrations") || "[]",
+      const response = await seminarService.registerForSeminar(
+        selectedSeminar.id,
+        { seatsBooked: seatsToRegister },
       );
-      const updated = [newRegistration, ...existing];
-      localStorage.setItem("registrations", JSON.stringify(updated));
 
       setSuccessMessage(
-        isWaitlisted
-          ? `Added to waitlist for ${selectedSeminar.vehicleModelNumber}!`
-          : `Successfully registered for ${selectedSeminar.vehicleModelNumber}!`,
+        response.data.message ||
+          (response.data.status === "WAIT"
+            ? "Added to waitlist!"
+            : "Registration successful!"),
       );
 
-      setTimeout(() => setSuccessMessage(""), 5000);
-      setSelectedSeminar(null);
-      setSeatsToRegister(1);
+      // Refresh seminar list to update seats / waitlist status
+      await fetchSeminars();
 
-      fetchSeminars();
+      // Auto redirect to My Registrations after success
+      setTimeout(() => {
+        navigate("/my-registrations");
+      }, 1500);
     } catch (err) {
       console.error("Registration error:", err.response?.data);
 
-      const msg = err.response?.data?.message || "Registration failed";
+      const msg =
+        err.response?.data?.message || "Registration failed. Please try again.";
 
       if (msg.includes("verified")) {
-        setErrorMessage(
-          "Your email needs verification. Please verify your email first.",
-        );
+        setErrorMessage("Your email needs verification before registering.");
       } else {
         setErrorMessage(msg);
       }
@@ -145,7 +124,7 @@ export default function SeminarRegistrationPage() {
             <div className="space-y-6">
               {seminars.map((seminar) => {
                 const avail = seminar.availableSeats || 0;
-                const total = seminar.totalSeats || 50;
+                const total = seminar.maxSeats || 50;
                 const progress = Math.round(((total - avail) / total) * 100);
 
                 return (

@@ -2,11 +2,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { seminarService } from "../api/seminarService";
 
 export default function MyRegistrationsPage() {
-  const { user, registrations = [] } = useAuth(); // ← Changed to use context directly (better)
+  const { user } = useAuth();
   const navigate = useNavigate();
 
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [dateFilter, setDateFilter] = useState("");
@@ -18,10 +21,30 @@ export default function MyRegistrationsPage() {
     }
   }, [user, navigate]);
 
-  // Filter registrations (now uses context registrations)
+  // Fetch registrations from Backend Database
+  const fetchRegistrations = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const response = await seminarService.getMyRegistrations();
+      setRegistrations(response.data || []);
+    } catch (err) {
+      console.error("Failed to fetch registrations:", err);
+      setRegistrations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRegistrations();
+  }, [user]);
+
+  // Filter registrations
   const filteredRegistrations = registrations
     .filter((reg) => {
-      const matchesSearch = reg.seminar
+      const matchesSearch = (reg.seminar || reg.vehicleModelNumber || "")
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
       const matchesStatus =
@@ -29,7 +52,7 @@ export default function MyRegistrationsPage() {
 
       let matchesDate = true;
       if (dateFilter) {
-        const regDate = new Date(reg.date || reg.registeredAt)
+        const regDate = new Date(reg.seminarDate || reg.date || reg.createdAt)
           .toISOString()
           .split("T")[0];
         matchesDate = regDate === dateFilter;
@@ -39,21 +62,20 @@ export default function MyRegistrationsPage() {
     })
     .sort(
       (a, b) =>
-        new Date(b.date || b.registeredAt) - new Date(a.date || a.registeredAt),
+        new Date(b.createdAt || b.date || b.registeredAt) -
+        new Date(a.createdAt || a.date || a.registeredAt),
     );
 
-  const handleCancel = (registrationId) => {
+  const handleCancel = async (registrationId) => {
     if (!confirm("Are you sure you want to cancel this registration?")) return;
 
-    const updated = registrations.map((reg) =>
-      reg.id === registrationId ? { ...reg, status: "Cancelled" } : reg,
-    );
-
-    // Update localStorage
-    localStorage.setItem("registrations", JSON.stringify(updated));
-
-    // Note: For better UX, you can add a cancelRegistration function in AuthContext later
-    window.location.reload(); // Temporary simple fix to refresh the list
+    try {
+      await seminarService.cancelRegistration(registrationId);
+      fetchRegistrations(); // Refresh list after cancel
+    } catch (err) {
+      console.error("Cancel failed:", err);
+      alert("Failed to cancel registration");
+    }
   };
 
   const clearFilters = () => {
@@ -101,9 +123,9 @@ export default function MyRegistrationsPage() {
               className="px-5 py-3 border border-gray-300 rounded-2xl focus:outline-none"
             >
               <option value="All">All Statuses</option>
-              <option value="Confirmed">Confirmed</option>
-              <option value="Waitlisted">Waitlisted</option>
-              <option value="Cancelled">Cancelled</option>
+              <option value="SUCCESS">Confirmed</option>
+              <option value="WAIT">Waitlisted</option>
+              <option value="CANCEL">Cancelled</option>
             </select>
 
             <button
@@ -133,7 +155,7 @@ export default function MyRegistrationsPage() {
             <div className="space-y-6">
               {filteredRegistrations.map((reg) => (
                 <div
-                  key={reg.id} // Fixed: Using unique id to avoid key warning
+                  key={reg.id}
                   className="border border-gray-200 rounded-3xl p-8 hover:shadow-md transition-all"
                 >
                   <div className="flex justify-between items-start">
@@ -142,18 +164,22 @@ export default function MyRegistrationsPage() {
                       <div>
                         <div className="flex items-center gap-3">
                           <h3 className="font-semibold text-xl">
-                            {reg.seminar}
+                            {reg.vehicleModelNumber || reg.seminar}
                           </h3>
                           <span
                             className={`px-5 py-1.5 text-sm font-medium rounded-full ${
-                              reg.status === "Confirmed"
+                              reg.status === "SUCCESS"
                                 ? "bg-green-100 text-green-700"
-                                : reg.status === "Waitlisted"
+                                : reg.status === "WAIT"
                                   ? "bg-amber-100 text-amber-700"
                                   : "bg-gray-100 text-gray-600"
                             }`}
                           >
-                            {reg.status}
+                            {reg.status === "SUCCESS"
+                              ? "Confirmed"
+                              : reg.status === "WAIT"
+                                ? "Waitlisted"
+                                : "Cancelled"}
                           </span>
                         </div>
                         <p className="text-gray-600 mt-1 text-sm">
@@ -162,7 +188,7 @@ export default function MyRegistrationsPage() {
                       </div>
                     </div>
 
-                    {reg.status !== "Cancelled" && (
+                    {reg.status !== "CANCEL" && (
                       <button
                         onClick={() => handleCancel(reg.id)}
                         className="text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
@@ -176,13 +202,17 @@ export default function MyRegistrationsPage() {
                     <div>
                       <p className="text-gray-500">Date</p>
                       <p className="font-medium">
-                        {new Date(reg.date).toLocaleDateString()}
+                        {new Date(
+                          reg.seminarDate || reg.date,
+                        ).toLocaleDateString()}
                       </p>
                     </div>
                     <div>
                       <p className="text-gray-500">Time</p>
                       <p className="font-medium">
-                        {new Date(reg.date).toLocaleTimeString([], {
+                        {new Date(
+                          reg.seminarDate || reg.date,
+                        ).toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
@@ -194,13 +224,17 @@ export default function MyRegistrationsPage() {
                     </div>
                     <div>
                       <p className="text-gray-500">Seats Reserved</p>
-                      <p className="font-medium">{reg.seats}</p>
+                      <p className="font-medium">
+                        {reg.seatsBooked || reg.seats}
+                      </p>
                     </div>
                   </div>
 
                   <div className="text-xs text-gray-500 mt-6">
                     Registered on:{" "}
-                    {new Date(reg.registeredAt || reg.date).toLocaleString()}
+                    {new Date(
+                      reg.createdAt || reg.registeredAt || reg.date,
+                    ).toLocaleString()}
                   </div>
                 </div>
               ))}

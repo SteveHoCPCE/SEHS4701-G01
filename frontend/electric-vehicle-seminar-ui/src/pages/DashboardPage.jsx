@@ -1,10 +1,44 @@
 // src/pages/DashboardPage.jsx
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { seminarService } from "../api/seminarService";
 
 export default function DashboardPage() {
-  const { user, registrations = [] } = useAuth(); // ← Only this line was slightly updated
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch real registrations from backend when dashboard loads
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user) return;
+
+      setLoading(true);
+      try {
+        const response = await seminarService.getMyRegistrations();
+        setRegistrations(response.data || []);
+      } catch (err) {
+        console.error("Failed to load dashboard registrations:", err);
+        setRegistrations([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user]);
+
+  // Calculate real statistics from backend data
+  const totalRegistrations = registrations.length;
+  const confirmed = registrations.filter(
+    (reg) => reg.status === "SUCCESS" || reg.status === "Confirmed",
+  ).length;
+  const waitlisted = registrations.filter(
+    (reg) => reg.status === "WAIT" || reg.status === "Waitlisted",
+  ).length;
 
   if (!user) {
     return (
@@ -13,15 +47,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  // Calculate real statistics (Added this block)
-  const totalRegistrations = registrations.length;
-  const confirmed = registrations.filter(
-    (reg) => reg.status === "Confirmed",
-  ).length;
-  const waitlisted = registrations.filter(
-    (reg) => reg.status === "Waitlisted",
-  ).length;
 
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-16">
@@ -91,7 +116,7 @@ export default function DashboardPage() {
 
           {/* Right Column - Statistics */}
           <div className="lg:col-span-4 space-y-8">
-            {/* Your Statistics - Now using real data */}
+            {/* Your Statistics - Now using real backend data */}
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
               <h3 className="font-semibold text-xl mb-6">Your Statistics</h3>
               <div className="space-y-6">

@@ -20,4 +20,19 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     List<Registration> findByCustomerIdAndCreatedAtAfterOrderByCreatedAtDesc(Long customerId, LocalDateTime after);
 
     Optional<Registration> findByIdAndCustomerId(Long id, Long customerId);
+
+    // ==================== ADDED: Most commonly used queries ====================
+
+    // Get all registrations for a customer (used in My Registrations page)
+    List<Registration> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    // Count registrations by seminar and status (for seat availability & waitlist)
+    long countBySeminarIdAndStatus(Long seminarId, RegistrationStatus status);
+
+    // Check if customer already registered for a seminar
+    List<Registration> findByCustomerIdAndSeminarId(Long customerId, Long seminarId);
+
+    // Get active (non-cancelled) registrations for a seminar
+    List<Registration> findBySeminarIdAndStatusInOrderByCreatedAtAsc(
+            Long seminarId, List<RegistrationStatus> statuses);
 }
