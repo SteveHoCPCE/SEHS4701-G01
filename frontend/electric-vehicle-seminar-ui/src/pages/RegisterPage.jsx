@@ -87,11 +87,25 @@ export default function RegisterPage() {
       console.error("Status code:", err.response?.status);
 
       const msg =
-        err.response?.data?.message ||
-        err.message ||
-        "Registration failed. Please check console logs.";
+        err.response?.data?.message || err.message || "Registration failed.";
 
-      setError(msg);
+      // Updated logic: Allow re-registration if previous attempt was not verified
+      if (
+        msg.toLowerCase().includes("already registered") ||
+        msg.toLowerCase().includes("email already exists") ||
+        msg.toLowerCase().includes("duplicate") ||
+        msg.toLowerCase().includes("already in use")
+      ) {
+        setError(
+          "This email is already registered but not verified. You can register again.",
+        );
+        // Auto redirect to verification page so user can try OTP again
+        setTimeout(() => {
+          navigate("/verify", { state: { email: formData.email.trim() } });
+        }, 2500);
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }

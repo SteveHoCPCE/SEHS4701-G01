@@ -1,13 +1,13 @@
 // src/pages/LoginPage.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext"; // ← Important
+import { useAuth } from "../context/AuthContext";
 import { authService } from "../api/authService";
 import { Mail, Lock } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login: contextLogin } = useAuth(); // Get login from context
+  const { login: contextLogin } = useAuth();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -35,23 +35,40 @@ export default function LoginPage() {
         password: formData.password,
       });
 
-      // Save to localStorage
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email: response.data.email,
-          name: response.data.name || "User",
-        }),
-      );
+      console.log("🔍 Full login response from backend:", response.data);
 
-      // Update AuthContext
-      contextLogin({
+      // Support both possible field names (verified or isVerified)
+      const isVerifiedFromBackend =
+        response.data.verified !== undefined
+          ? response.data.verified
+          : response.data.isVerified !== undefined
+            ? response.data.isVerified
+            : false;
+
+      const userData = {
         email: response.data.email,
         name: response.data.name || "User",
-      });
+        isVerified: isVerifiedFromBackend,
+        token: response.data.token,
+      };
 
-      console.log("Login successful! Redirecting to dashboard...");
+      // Save to localStorage
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      // Update AuthContext
+      contextLogin(userData);
+
+      // Check verification status
+      if (!userData.isVerified) {
+        setError("Please verify your email address before logging in.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        console.log("❌ User is not verified - blocking login");
+        return;
+      }
+
+      console.log("✅ Login successful! Redirecting to dashboard...");
       navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);

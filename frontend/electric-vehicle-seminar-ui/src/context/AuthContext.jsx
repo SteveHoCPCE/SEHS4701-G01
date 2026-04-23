@@ -5,7 +5,7 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [registrations, setRegistrations] = useState([]); // ← Added
+  const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Load user and registrations from localStorage when app starts
@@ -19,34 +19,37 @@ export function AuthProvider({ children }) {
     if (savedUser) {
       const enhancedUser = {
         ...JSON.parse(savedUser),
-        isVerified: savedVerified,
+        isVerified: savedVerified, // Keep the saved verified status
       };
       setUser(enhancedUser);
     }
 
-    setRegistrations(savedRegistrations); // ← Added
+    setRegistrations(savedRegistrations);
     setLoading(false);
   }, []);
 
-  // Login - Force verified status (your original function)
+  // Login - ONLY use the data from backend (no force verified)
   const login = (userData) => {
-    const enhancedUser = { ...userData, isVerified: true };
-    setUser(enhancedUser);
-    localStorage.setItem("user", JSON.stringify(enhancedUser));
-    localStorage.setItem("isVerified", "true");
+    // Removed force isVerified: true
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+
+    // Save verified status from backend
+    if (userData.isVerified !== undefined) {
+      localStorage.setItem("isVerified", userData.isVerified.toString());
+    }
   };
 
   const logout = () => {
     setUser(null);
-    setRegistrations([]); // ← Added
+    setRegistrations([]);
     localStorage.removeItem("user");
     localStorage.removeItem("isVerified");
-    localStorage.removeItem("registrations"); // ← Added
+    localStorage.removeItem("registrations");
   };
 
-  // Add new registration (used by SeminarRegistrationPage)
+  // Add new registration
   const addRegistration = (newReg) => {
-    // ← Added
     const updated = [newReg, ...registrations];
     setRegistrations(updated);
     localStorage.setItem("registrations", JSON.stringify(updated));
@@ -54,11 +57,11 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    registrations, // ← Added
+    registrations,
     loading,
     login,
     logout,
-    addRegistration, // ← Added
+    addRegistration,
     isAuthenticated: !!user,
   };
 
