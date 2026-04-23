@@ -3,7 +3,7 @@
 ## Project Overview
 **Client:** One of China’s largest electric vehicle (EV) manufacturers.
 **Mission:** Act as a consultancy team (5-6 students) to design and develop an online electric vehicle seminar registration system. 
-**Deadline:** April 19th, 2026, at 11:30 PM (Week 12).
+**Deadline:** April 26th, 2026, at 11:30 PM.
 
 ## Technical Stack
 *   **Architecture:** J2EE Concepts
