@@ -36,12 +36,4 @@ public class SeminarService {
                 .availableSeats(Math.max(0, s.getMaxSeats() - bookedSeats))
                 .build();
     }
-
-    // ==================== NEW: Registration Logic (added only) ====================
-    public com.sehs4701.backend.dto.response.RegistrationResponse registerForSeminar(
-            String email, Long seminarId, int seats) {
-        // This will be implemented in RegistrationService or here
-        // For now calling placeholder - we'll create RegistrationService next if needed
-        throw new UnsupportedOperationException("Moved to RegistrationService");
-    }
 }

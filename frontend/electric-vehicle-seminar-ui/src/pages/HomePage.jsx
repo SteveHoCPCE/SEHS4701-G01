@@ -1,61 +1,151 @@
-// src/pages/HomePage.jsx
+import { Link } from "react-router-dom";
+import {
+  Car,
+  CalendarCheck,
+  ShieldCheck,
+  History,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import { useAuth } from "../context/useAuth";
+
+const features = [
+  {
+    icon: ShieldCheck,
+    title: "Secure Membership",
+    body: "Register as Personal or Company with email OTP verification to keep your account secure.",
+  },
+  {
+    icon: Car,
+    title: "EV Feature Catalog",
+    body: "Browse 5+ flagship Chinese electric vehicles with detailed specs, features and pricing.",
+  },
+  {
+    icon: CalendarCheck,
+    title: "Seminar Booking",
+    body: "Reserve 1–2 seats for upcoming seminars with automatic SUCCESS / WAITLIST handling.",
+  },
+  {
+    icon: History,
+    title: "Registration Enquiry",
+    body: "Track, filter and cancel your seminar registrations within the past 12 months.",
+  },
+];
+
 export default function HomePage() {
+  const { isAuthenticated } = useAuth();
+
   return (
-    <div className="bg-[#0a0a0a] text-white min-h-screen">
-      {/* Hero Section */}
-      <div className="pt-32 pb-40 text-center relative">
-        <div className="max-w-5xl mx-auto px-6">
-          {/* System Status */}
-          <div className="inline-flex items-center gap-2 bg-[#1a1a2e] border border-cyan-500/30 rounded-full px-5 py-2 text-sm mb-8">
-            <span className="text-cyan-400">●</span>
-            SYSTEM ONLINE // PROTOCOL V2.0
-          </div>
-
-          {/* Main Title */}
-          <h1 className="text-7xl font-bold leading-none mb-6">
-            WELCOME TO ZHONGNENG
-            <br />
-            <span className="text-cyan-400">EV REGISTRATION NEXUS</span>
+    <div className="page-shell">
+      <section className="hero">
+        <div className="container hero-content">
+          <span className="hero-kicker">
+            <Sparkles size={14} /> ZhongNeng EV · Seminar Platform
+          </span>
+          <h1>
+            Experience the future of electric mobility, one seminar at a time.
           </h1>
-
-          {/* Subtitle */}
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
-            Experience the future of electric mobility. Register for exclusive
-            seminars, explore our latest EV models, and join China's electric
-            vehicle revolution with our next-generation platform.
+          <p className="hero-copy">
+            Discover premium Chinese electric vehicles, reserve seats for live
+            product seminars, and manage your registrations — all in one
+            beautifully simple portal.
           </p>
 
-          {/* Buttons */}
-          <div className="flex gap-5 justify-center">
-            <a
-              href="/register"
-              className="bg-cyan-500 hover:bg-cyan-600 text-black px-10 py-4 rounded-2xl font-semibold text-lg transition flex items-center gap-2"
-            >
-              INITIALIZE ACCOUNT →
-            </a>
-            <a
-              href="/seminar-register"
-              className="border border-cyan-400 hover:bg-cyan-950 px-10 py-4 rounded-2xl font-semibold text-lg transition flex items-center gap-2"
-            >
-              EXPLORE FLEET ⚡
-            </a>
+          <div className="hero-actions">
+            {isAuthenticated ? (
+              <>
+                <Link to="/seminars" className="btn btn-primary">
+                  Book a Seminar <ArrowRight size={16} />
+                </Link>
+                <Link to="/vehicles" className="btn btn-secondary">
+                  Browse EV Catalog
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/register" className="btn btn-primary">
+                  Create Free Account <ArrowRight size={16} />
+                </Link>
+                <Link to="/vehicles" className="btn btn-secondary">
+                  Explore EVs
+                </Link>
+              </>
+            )}
+          </div>
+
+          <div className="hero-stats">
+            <div className="hero-stat">
+              <strong>5+</strong>
+              <span>Flagship EV models</span>
+            </div>
+            <div className="hero-stat">
+              <strong>7</strong>
+              <span>Upcoming seminars</span>
+            </div>
+            <div className="hero-stat">
+              <strong>1–2</strong>
+              <span>Seats per booking</span>
+            </div>
+            <div className="hero-stat">
+              <strong>12mo</strong>
+              <span>History tracking</span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Core Modules Section */}
-      <div className="py-20 border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 text-cyan-400 text-sm mb-4">
-            ⚙️ SYSTEM ARCHITECTURE
-          </div>
-          <h2 className="text-5xl font-bold mb-6">CORE MODULES</h2>
-          <p className="text-gray-400 max-w-2xl mx-auto">
-            Our comprehensive seminar registration system provides everything
-            you need to explore and experience our futuristic electric vehicles.
+      <section className="container section" style={{ marginTop: 48 }}>
+        <div className="section-header">
+          <h2>Everything you need in one place</h2>
+          <p>
+            Every core function of the project is designed to be fast, obvious
+            and stress-free — from signup to seminar enquiry.
           </p>
         </div>
-      </div>
+        <div className="grid-4">
+          {features.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article key={item.title} className="feature-card">
+                <div className="feature-icon">
+                  <Icon size={20} />
+                </div>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="container section" style={{ marginTop: 48 }}>
+        <div
+          className="card elevated"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 20,
+          }}
+        >
+          <div>
+            <h2>Ready to reserve your seat?</h2>
+            <p style={{ marginTop: 6 }}>
+              Sign up, verify your email, and pick from our upcoming seminars.
+            </p>
+          </div>
+          {isAuthenticated ? (
+            <Link to="/seminars" className="btn btn-primary">
+              Book Seminar <ArrowRight size={16} />
+            </Link>
+          ) : (
+            <Link to="/register" className="btn btn-primary">
+              Get Started <ArrowRight size={16} />
+            </Link>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

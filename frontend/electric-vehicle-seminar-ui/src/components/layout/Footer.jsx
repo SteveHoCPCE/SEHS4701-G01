@@ -1,63 +1,47 @@
-// src/components/layout/Footer.jsx
 import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-200 py-16 mt-auto">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {/* Brand */}
+    <footer className="site-footer">
+      <div className="container">
+        <div className="footer-grid">
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">Z</span>
+            <div className="footer-brand">
+              <div className="brand-badge">ZN</div>
+              <div>
+                <p className="brand-title">ZhongNeng EV</p>
+                <p className="brand-subtitle">Smart mobility experience</p>
               </div>
-              <span className="font-bold text-2xl">ZhongNeng EV</span>
             </div>
-            <p className="text-gray-600 leading-relaxed">
-              Leading China's electric vehicle revolution with innovative
-              technology and sustainable solutions.
+            <p className="muted" style={{ fontSize: 14, maxWidth: 360 }}>
+              Discover EV features, register upcoming seminars, and manage your
+              bookings in one unified portal.
             </p>
           </div>
 
-          {/* Contact */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Contact</h3>
-            <div className="space-y-2 text-gray-600">
-              <p>Email: info@zhongneng-ev.com</p>
-              <p>Phone: +86 400-888-9999</p>
-              <p>Address: Beijing, China</p>
+            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Explore</h3>
+            <div className="footer-list">
+              <Link to="/vehicles">EV Catalog</Link>
+              <Link to="/seminars">Upcoming Seminars</Link>
+              <Link to="/my-registrations">My Registrations</Link>
+              <Link to="/dashboard">Dashboard</Link>
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
-            <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
-            <div className="space-y-2 text-gray-600">
-              <Link
-                to="/seminar-register"
-                className="block hover:text-blue-600"
-              >
-                EV Catalog
-              </Link>
-              <Link to="/register" className="block hover:text-blue-600">
-                Create Account
-              </Link>
-              <Link to="/login" className="block hover:text-blue-600">
-                Login
-              </Link>
-              <Link
-                to="/my-registrations"
-                className="block hover:text-blue-600"
-              >
-                My Registrations
-              </Link>
+            <h3 style={{ fontSize: 14, marginBottom: 12 }}>Contact</h3>
+            <div className="footer-list">
+              <span>info@zhongneng-ev.com</span>
+              <span>+86 400-888-9999</span>
+              <span>Guangzhou, China</span>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-200 mt-12 pt-8 text-center text-sm text-gray-500">
-          © 2026 ZhongNeng Electric Vehicles. All rights reserved.
+        <div className="footer-bottom">
+          © {new Date().getFullYear()} ZhongNeng Electric Vehicles · SEHS4701
+          Group Project
         </div>
       </div>
     </footer>

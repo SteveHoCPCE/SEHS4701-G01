@@ -1,130 +1,119 @@
-// src/pages/VerificationPage.jsx
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ShieldCheck, MailCheck, ArrowLeft } from "lucide-react";
 import { authService } from "../api/authService";
+import { useAuth } from "../context/useAuth";
 
 export default function VerificationPage() {
   const navigate = useNavigate();
   const location = useLocation();
-
-  const email =
-    location.state?.email || localStorage.getItem("pendingEmail") || "";
-
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const { login } = useAuth();
+  const inputRef = useRef(null);
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const email = useMemo(
+    () => location.state?.email || localStorage.getItem("pendingEmail") || "",
+    [location.state]
+  );
 
   useEffect(() => {
     if (!email) {
-      navigate("/register");
+      navigate("/register", { replace: true });
+    } else if (inputRef.current) {
+      inputRef.current.focus();
     }
   }, [email, navigate]);
 
-  const handleOtpChange = (index, value) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
+  async function handleVerify(e) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
 
-    if (value && index < 5) {
-      const next = document.getElementById(`otp-${index + 1}`);
-      next?.focus();
-    }
-  };
-
-  const handleVerify = async () => {
-    const otpCode = otp.join("").trim();
-
-    if (otpCode.length !== 6) {
-      setError("Please enter all 6 digits");
+    if (!/^\d{6}$/.test(otp)) {
+      setError("Please enter the 6-digit OTP code sent to your email.");
       return;
     }
 
     setLoading(true);
-    setError("");
-
     try {
-      console.log("Sending OTP:", otpCode, "for email:", email);
+      const response = await authService.verifyEmail({ email, otpCode: otp });
 
-      await authService.verifyEmail({
-        email: email,
-        otpCode: otpCode,
-      });
+      // Auto-login using the token returned from verify-email
+      const data = response.data || {};
+      if (data.token) {
+        login({
+          email: data.email,
+          name: data.name,
+          verified: data.verified ?? true,
+          token: data.token,
+        });
 
-      alert("✅ Email verified successfully!");
-      navigate("/dashboard", { replace: true });
+        setSuccess("Email verified! Taking you to your dashboard...");
+        setTimeout(() => navigate("/dashboard", { replace: true }), 700);
+      } else {
+        // Fallback if backend doesn't return a token (older versions)
+        setSuccess("Email verified. Please log in to continue.");
+        setTimeout(() => navigate("/login"), 800);
+      }
     } catch (err) {
-      console.error("Verification error:", err.response?.data || err);
-      setError("Invalid or expired verification code. Please try again.");
+      setError(err.response?.data?.message || "Invalid or expired code. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").slice(0, 6);
-    setOtp(pasted.split("").concat(Array(6 - pasted.length).fill("")));
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center py-12 px-6">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-[#1a1a2e] border border-cyan-500/30 rounded-full px-6 py-2 text-sm mb-6">
-            <span className="text-cyan-400">●</span>
-            EMAIL VERIFICATION
+    <div className="page-shell auth-bg">
+      <div className="container narrow">
+        <Link to="/register" className="btn btn-ghost btn-sm" style={{ marginBottom: 12 }}>
+          <ArrowLeft size={14} /> Back to register
+        </Link>
+
+        <div className="card auth-card elevated">
+          <div className="feature-icon" style={{ marginBottom: 16 }}>
+            <MailCheck size={22} />
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-white">
-            VERIFY YOUR EMAIL
-          </h1>
-          <p className="text-gray-400">
-            We sent a 6-digit code to
-            <br />
-            <span className="text-cyan-400">{email}</span>
+          <h1>Verify your email</h1>
+          <p className="muted" style={{ marginTop: 6 }}>
+            We sent a 6-digit verification code to <strong>{email}</strong>.
+            Enter it below to activate your account.
           </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-900/30 border border-red-500 text-red-400 px-6 py-4 rounded-2xl mb-8 text-center">
-            {error}
-          </div>
-        )}
+          {error && <p className="alert alert-error">{error}</p>}
+          {success && <p className="alert alert-success">{success}</p>}
 
-        <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
-          <div
-            className="flex justify-center gap-3 mb-10"
-            onPaste={handlePaste}
-          >
-            {otp.map((digit, index) => (
+          <form onSubmit={handleVerify} className="form-stack">
+            <label>
+              Verification Code
               <input
-                key={index}
-                id={`otp-${index}`}
+                ref={inputRef}
+                className="otp-input"
                 type="text"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleOtpChange(index, e.target.value)}
-                className="w-14 h-14 text-center text-3xl bg-[#1a1a2e] border border-gray-700 rounded-2xl focus:border-cyan-500 focus:outline-none text-white"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="••••••"
               />
-            ))}
-          </div>
+            </label>
 
-          <button
-            onClick={handleVerify}
-            disabled={loading || otp.join("").length !== 6}
-            className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl text-lg transition-all"
-          >
-            {loading ? "VERIFYING..." : "VERIFY EMAIL"}
-          </button>
-
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Didn't receive the code?{" "}
-            <span
-              onClick={() => navigate("/register")}
-              className="text-cyan-400 hover:underline cursor-pointer"
+            <button
+              className="btn btn-primary btn-block"
+              type="submit"
+              disabled={loading}
             >
-              Register again
-            </span>
+              <ShieldCheck size={16} />
+              {loading ? "Verifying..." : "Verify & Continue"}
+            </button>
+          </form>
+
+          <p className="helper-row">
+            Didn’t receive a code? <Link to="/register">Register again</Link> to
+            resend the OTP. Codes expire after 5 minutes.
           </p>
         </div>
       </div>

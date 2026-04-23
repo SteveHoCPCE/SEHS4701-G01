@@ -1,92 +1,87 @@
-// src/components/layout/Navbar.jsx
-import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { LogOut } from "lucide-react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { LogOut, LayoutDashboard } from "lucide-react";
+import { useAuth } from "../../context/useAuth";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const isMinimalPage = ["/verify", "/protocol-complete"].includes(
-    location.pathname,
-  );
+  if (location.pathname === "/verify") {
+    return null;
+  }
 
-  if (isMinimalPage) return null;
-
-  const handleLogout = () => {
+  function handleLogout() {
     logout();
-  };
+    navigate("/", { replace: true });
+  }
 
   return (
-    <nav className="bg-white border-b border-gray-200 fixed w-full z-50">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-600 rounded-2xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">Z</span>
-            </div>
-            <div>
-              <span className="font-bold text-2xl">ZhongNeng EV</span>
-            </div>
-          </Link>
+    <nav className="main-nav">
+      <div className="container nav-inner">
+        <Link to="/" className="brand">
+          <div className="brand-badge">ZN</div>
+          <div>
+            <p className="brand-title">ZhongNeng EV</p>
+            <p className="brand-subtitle">Seminar Platform</p>
+          </div>
+        </Link>
 
-          {/* Menu */}
-          <div className="flex items-center gap-8">
-            <Link
-              to="/catalog"
-              className="text-gray-700 hover:text-black font-medium"
-            >
-              EV Catalog
-            </Link>
-            <Link
-              to="/seminar-register"
-              className="text-gray-700 hover:text-black font-medium"
-            >
-              Register Seminar
-            </Link>
-            <Link
+        <div className="nav-links">
+          <NavLink
+            to="/vehicles"
+            className={({ isActive }) =>
+              `nav-link ${isActive ? "active" : ""}`
+            }
+          >
+            EV Catalog
+          </NavLink>
+          <NavLink
+            to="/seminars"
+            className={({ isActive }) =>
+              `nav-link ${isActive ? "active" : ""}`
+            }
+          >
+            Seminars
+          </NavLink>
+          {user && (
+            <NavLink
               to="/my-registrations"
-              className="text-gray-700 hover:text-black font-medium"
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "active" : ""}`
+              }
             >
               My Registrations
-            </Link>
+            </NavLink>
+          )}
+        </div>
 
-            {user ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="px-5 py-2 bg-black text-white rounded-xl font-medium"
-                >
-                  Dashboard
-                </Link>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">{user.name}</span>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 text-red-600 hover:text-red-700"
-                  >
-                    <LogOut size={18} />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="px-6 py-2 text-gray-700 border border-gray-300 rounded-xl hover:border-blue-600"
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="px-6 py-2 bg-black text-white rounded-xl"
-                >
-                  Register
-                </Link>
-              </>
-            )}
-          </div>
+        <div className="nav-actions">
+          {user ? (
+            <>
+              <Link to="/dashboard" className="btn btn-secondary btn-sm">
+                <LayoutDashboard size={14} />
+                Dashboard
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="btn btn-ghost btn-sm"
+                type="button"
+              >
+                <LogOut size={14} />
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn btn-secondary btn-sm">
+                Sign in
+              </Link>
+              <Link to="/register" className="btn btn-primary btn-sm">
+                Get started
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

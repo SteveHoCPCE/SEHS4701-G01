@@ -1,67 +1,45 @@
-// src/context/AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
+export { AuthContext };
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load user and registrations from localStorage when app starts
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    const savedRegistrations = JSON.parse(
-      localStorage.getItem("registrations") || "[]",
-    );
-    const savedVerified = localStorage.getItem("isVerified") === "true";
-
-    if (savedUser) {
-      const enhancedUser = {
-        ...JSON.parse(savedUser),
-        isVerified: savedVerified, // Keep the saved verified status
-      };
-      setUser(enhancedUser);
+    try {
+      const savedUser = localStorage.getItem("user");
+      const savedToken = localStorage.getItem("token");
+      if (savedUser && savedToken) {
+        setUser(JSON.parse(savedUser));
+      }
+    } finally {
+      setLoading(false);
     }
-
-    setRegistrations(savedRegistrations);
-    setLoading(false);
   }, []);
 
-  // Login - ONLY use the data from backend (no force verified)
   const login = (userData) => {
-    // Removed force isVerified: true
     setUser(userData);
     localStorage.setItem("user", JSON.stringify(userData));
-
-    // Save verified status from backend
-    if (userData.isVerified !== undefined) {
-      localStorage.setItem("isVerified", userData.isVerified.toString());
+    if (userData.token) {
+      localStorage.setItem("token", userData.token);
     }
+    localStorage.removeItem("pendingEmail");
   };
 
   const logout = () => {
     setUser(null);
-    setRegistrations([]);
     localStorage.removeItem("user");
-    localStorage.removeItem("isVerified");
-    localStorage.removeItem("registrations");
-  };
-
-  // Add new registration
-  const addRegistration = (newReg) => {
-    const updated = [newReg, ...registrations];
-    setRegistrations(updated);
-    localStorage.setItem("registrations", JSON.stringify(updated));
+    localStorage.removeItem("token");
+    localStorage.removeItem("pendingEmail");
   };
 
   const value = {
     user,
-    registrations,
     loading,
     login,
     logout,
-    addRegistration,
     isAuthenticated: !!user,
   };
 
@@ -72,4 +50,3 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);

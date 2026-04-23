@@ -2,7 +2,7 @@
 
 Base URL: `http://localhost:8080`
 
-Frontend runs on `http://localhost:3000` (CORS already configured).
+Frontend runs on `http://localhost:5173` (CORS is configured for both `5173` and `3000`).
 
 ---
 
@@ -95,7 +95,10 @@ No auth required.
 **Success (200):**
 ```json
 {
-  "message": "Email verified successfully"
+  "token": "eyJhbGciOiJIUzUxMiJ9...",
+  "email": "test@gmail.com",
+  "name": "Chan Tai Man",
+  "verified": true
 }
 ```
 
@@ -406,7 +409,7 @@ No request body needed.
 | Page | APIs to use |
 |------|-------------|
 | Register page | `POST /api/auth/register` |
-| OTP verification page | `POST /api/auth/verify-email` |
+| OTP verification page | `POST /api/auth/verify-email` (returns JWT for auto-login) |
 | Login page | `POST /api/auth/login` |
 | Profile page | `GET /api/users/profile` |
 | Vehicle listing page | `GET /api/vehicles` |

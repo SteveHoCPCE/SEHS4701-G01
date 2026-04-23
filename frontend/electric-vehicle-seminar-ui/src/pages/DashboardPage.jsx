@@ -1,197 +1,203 @@
-// src/pages/DashboardPage.jsx
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { CalendarPlus, ClipboardList, ArrowRight } from "lucide-react";
+import { customerService } from "../api/customerService";
 import { seminarService } from "../api/seminarService";
+import { useAuth } from "../context/useAuth";
+
+function formatDate(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-
+  const [profile, setProfile] = useState(null);
   const [registrations, setRegistrations] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Fetch real registrations from backend when dashboard loads
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user) return;
-
+    async function load() {
       setLoading(true);
+      setError("");
       try {
-        const response = await seminarService.getMyRegistrations();
-        setRegistrations(response.data || []);
+        const [profileResponse, registrationResponse] = await Promise.all([
+          customerService.getCustomerProfile(),
+          seminarService.getMyRegistrations(),
+        ]);
+        setProfile(profileResponse.data);
+        setRegistrations(registrationResponse.data || []);
       } catch (err) {
-        console.error("Failed to load dashboard registrations:", err);
-        setRegistrations([]);
+        setError(err.response?.data?.message || "Failed to load dashboard data.");
       } finally {
         setLoading(false);
       }
-    };
+    }
+    load();
+  }, []);
 
-    fetchDashboardData();
-  }, [user]);
+  const stats = useMemo(
+    () => ({
+      total: registrations.length,
+      success: registrations.filter((i) => i.status === "SUCCESS").length,
+      wait: registrations.filter((i) => i.status === "WAIT").length,
+      cancel: registrations.filter((i) => i.status === "CANCEL").length,
+    }),
+    [registrations]
+  );
 
-  // Calculate real statistics from backend data
-  const totalRegistrations = registrations.length;
-  const confirmed = registrations.filter(
-    (reg) => reg.status === "SUCCESS" || reg.status === "Confirmed",
-  ).length;
-  const waitlisted = registrations.filter(
-    (reg) => reg.status === "WAIT" || reg.status === "Waitlisted",
-  ).length;
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-28">
-        <p className="text-xl text-gray-600">Please log in first.</p>
-      </div>
-    );
-  }
+  if (loading)
+    return <div className="page-shell centered">Loading dashboard...</div>;
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-28 pb-16">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold text-gray-900">
-            Welcome back, {user.name}!
-          </h1>
-          <p className="text-gray-600 mt-3 text-lg">
-            Manage your EV seminar registrations and explore our latest models
+    <div className="page-shell">
+      <div className="container section">
+        <div className="section-header">
+          <h1>Welcome back, {user?.name || profile?.name || "there"}</h1>
+          <p>
+            Your profile, seminar history and quick actions — all in one place.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column */}
-          <div className="lg:col-span-8 space-y-8">
-            {/* Your Profile */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h3 className="font-semibold text-2xl mb-6">Your Profile</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div>
-                  <p className="text-gray-500 text-sm">Customer Type</p>
-                  <p className="font-medium mt-1">Personal</p>
+        {error && <p className="alert alert-error">{error}</p>}
+
+        <div className="stats-grid">
+          <div className="stat-box">
+            <span>Total</span>
+            <strong>{stats.total}</strong>
+          </div>
+          <div className="stat-box accent-success">
+            <span>Success</span>
+            <strong>{stats.success}</strong>
+          </div>
+          <div className="stat-box accent-wait">
+            <span>Waitlist</span>
+            <strong>{stats.wait}</strong>
+          </div>
+          <div className="stat-box accent-cancel">
+            <span>Cancelled</span>
+            <strong>{stats.cancel}</strong>
+          </div>
+        </div>
+
+        <div className="split">
+          <div className="card">
+            <h2>Profile</h2>
+            {profile ? (
+              <div className="detail-grid" style={{ marginTop: 12 }}>
+                <div className="detail-row">
+                  <span>Name</span>
+                  <strong>{profile.name}</strong>
                 </div>
-                <div>
-                  <p className="text-gray-500 text-sm">Email</p>
-                  <p className="font-medium mt-1">{user.email}</p>
+                <div className="detail-row">
+                  <span>Email</span>
+                  <strong>{profile.email}</strong>
                 </div>
-                <div>
-                  <p className="text-gray-500 text-sm">Telephone</p>
-                  <p className="font-medium mt-1">+852 123 456 78</p>
+                <div className="detail-row">
+                  <span>Telephone</span>
+                  <strong>{profile.telephone}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Customer Type</span>
+                  <strong>{profile.customerType}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Email Verified</span>
+                  <strong>
+                    <span
+                      className={`status-chip ${
+                        profile.emailVerified ? "status-success" : "status-wait"
+                      }`}
+                    >
+                      {profile.emailVerified ? "Verified" : "Pending"}
+                    </span>
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Member Since</span>
+                  <strong>{formatDate(profile.createdAt)}</strong>
                 </div>
               </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h3 className="font-semibold text-xl mb-6">Quick Actions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  onClick={() => navigate("/catalog")}
-                  className="p-6 border border-gray-200 rounded-2xl hover:border-blue-600 hover:bg-blue-50 transition-all text-left"
-                >
-                  <div className="text-2xl mb-3">🚗</div>
-                  <p className="font-medium">Browse EVs</p>
-                </button>
-
-                <button
-                  onClick={() => navigate("/seminar-register")}
-                  className="p-6 border border-gray-200 rounded-2xl hover:border-blue-600 hover:bg-blue-50 transition-all text-left"
-                >
-                  <div className="text-2xl mb-3">📅</div>
-                  <p className="font-medium">Register Seminar</p>
-                </button>
-
-                <button
-                  onClick={() => navigate("/my-registrations")}
-                  className="p-6 border border-gray-200 rounded-2xl hover:border-blue-600 hover:bg-blue-50 transition-all text-left"
-                >
-                  <div className="text-2xl mb-3">📋</div>
-                  <p className="font-medium">My Registrations</p>
-                </button>
-              </div>
-            </div>
+            ) : (
+              <p className="muted">Profile not available.</p>
+            )}
           </div>
 
-          {/* Right Column - Statistics */}
-          <div className="lg:col-span-4 space-y-8">
-            {/* Your Statistics - Now using real backend data */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h3 className="font-semibold text-xl mb-6">Your Statistics</h3>
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Total Registrations</span>
-                  <span className="text-2xl font-bold text-blue-600">
-                    {totalRegistrations}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Confirmed</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    {confirmed}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Waitlisted</span>
-                  <span className="text-2xl font-bold text-amber-600">
-                    {waitlisted}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Notifications */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <h3 className="font-semibold text-xl mb-6 flex items-center gap-2">
-                <span>✉️</span> Recent Notifications
-              </h3>
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-sm font-medium">
-                    Welcome to ZhongNeng EV - Registration Successful
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    4/19/2026, 10:15:02 PM
-                  </p>
-                </div>
-                <div className="p-4 bg-gray-50 rounded-2xl">
-                  <p className="text-sm font-medium">
-                    Email Verification - ZhongNeng EV
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    4/19/2026, 10:14:50 PM
-                  </p>
-                </div>
-              </div>
+          <div className="card">
+            <h2>Quick actions</h2>
+            <p className="muted" style={{ marginTop: 4, fontSize: 14 }}>
+              Jump back into your seminar workflow.
+            </p>
+            <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+              <Link to="/seminars" className="btn btn-primary btn-block">
+                <CalendarPlus size={16} />
+                Book a new seminar
+              </Link>
+              <Link to="/my-registrations" className="btn btn-secondary btn-block">
+                <ClipboardList size={16} />
+                View all registrations
+              </Link>
+              <Link to="/vehicles" className="btn btn-ghost btn-block">
+                Browse EV catalog <ArrowRight size={14} />
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* My Registrations Section */}
-        <div className="mt-12">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-semibold">My Registrations</h2>
-            <button
-              onClick={() => navigate("/my-registrations")}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              View All
-            </button>
+        <div className="card">
+          <div className="table-head">
+            <h2>Recent registrations</h2>
+            <Link to="/my-registrations">View all →</Link>
           </div>
-
-          <div className="bg-white rounded-3xl p-12 text-center border border-gray-100">
-            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              📅
+          {registrations.length === 0 ? (
+            <p className="muted">
+              No registrations yet.{" "}
+              <Link to="/seminars" style={{ color: "var(--brand)", fontWeight: 600 }}>
+                Book your first seminar
+              </Link>
+              .
+            </p>
+          ) : (
+            <div className="table-card" style={{ padding: 0 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Vehicle</th>
+                    <th>Seminar Date</th>
+                    <th>Seats</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {registrations.slice(0, 5).map((item) => (
+                    <tr key={item.id}>
+                      <td>#{item.id}</td>
+                      <td>
+                        <strong>{item.vehicleModelNumber}</strong>
+                      </td>
+                      <td>{formatDate(item.seminarDate)}</td>
+                      <td>{item.seatsBooked}</td>
+                      <td>
+                        <span
+                          className={`status-chip status-${item.status.toLowerCase()}`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <p className="text-gray-500">No registrations yet</p>
-            <button
-              onClick={() => navigate("/seminar-register")}
-              className="mt-6 bg-black text-white px-8 py-3 rounded-2xl hover:bg-gray-800"
-            >
-              Register for a Seminar
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

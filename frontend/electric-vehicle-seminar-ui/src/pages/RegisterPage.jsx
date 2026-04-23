@@ -1,287 +1,225 @@
-// src/pages/RegisterPage.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { UserPlus, User, Building2 } from "lucide-react";
 import { authService } from "../api/authService";
+
+const defaultForm = {
+  name: "",
+  telephone: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+  customerType: "PERSONAL",
+};
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-
-  const [activeTab, setActiveTab] = useState("INDIVIDUAL");
-
-  const [formData, setFormData] = useState({
-    name: "",
-    telephone: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    customerType: "PERSONAL",
-    organizationName: "",
-  });
-
+  const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    setFormData((prev) => ({
-      ...prev,
-      customerType: tab === "INDIVIDUAL" ? "PERSONAL" : "COMPANY",
-    }));
-  };
+  function updateField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleRegister = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
     setError("");
-    setSuccessMsg("");
 
-    console.log("🚀 Registration started for email:", formData.email);
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      setLoading(false);
-      return;
-    }
-
+    setLoading(true);
+    const normalizedEmail = form.email.trim().toLowerCase();
     try {
-      const payload = {
-        name: formData.name.trim(),
-        telephone: formData.telephone.trim(),
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        customerType: formData.customerType,
-      };
+      await authService.register({
+        name: form.name.trim(),
+        telephone: form.telephone.trim(),
+        email: normalizedEmail,
+        password: form.password,
+        customerType: form.customerType,
+      });
 
-      if (activeTab === "CORPORATE" && formData.organizationName.trim()) {
-        payload.organizationName = formData.organizationName.trim();
-      }
-
-      console.log("📤 Sending payload to backend:", payload);
-
-      await authService.register(payload);
-
-      console.log("✅ Registration API call successful");
-
-      localStorage.setItem("pendingEmail", formData.email.trim());
-
-      setSuccessMsg("Registration successful! Checking your email for OTP...");
-
-      // Small delay before navigating
-      setTimeout(() => {
-        navigate("/verify", { state: { email: formData.email.trim() } });
-      }, 1500);
+      localStorage.setItem("pendingEmail", normalizedEmail);
+      navigate("/verify", {
+        state: { email: normalizedEmail },
+        replace: true,
+      });
     } catch (err) {
-      console.error("❌ Full registration error:", err);
-      console.error("Response data:", err.response?.data);
-      console.error("Status code:", err.response?.status);
-
-      const msg =
-        err.response?.data?.message || err.message || "Registration failed.";
-
-      // Updated logic: Allow re-registration if previous attempt was not verified
-      if (
-        msg.toLowerCase().includes("already registered") ||
-        msg.toLowerCase().includes("email already exists") ||
-        msg.toLowerCase().includes("duplicate") ||
-        msg.toLowerCase().includes("already in use")
-      ) {
-        setError(
-          "This email is already registered but not verified. You can register again.",
-        );
-        // Auto redirect to verification page so user can try OTP again
-        setTimeout(() => {
-          navigate("/verify", { state: { email: formData.email.trim() } });
-        }, 2500);
-      } else {
-        setError(msg);
-      }
+      setError(
+        err.response?.data?.message || "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center py-12 px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1a1a2e_1px,transparent_1px),linear-gradient(to_bottom,#1a1a2e_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-
-      <div className="w-full max-w-lg relative z-10">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-[#1a1a2e] border border-cyan-500/30 rounded-full px-6 py-2 text-sm mb-6">
-            <span className="text-cyan-400">●</span>
-            REGISTRATION NODE ACTIVE
+    <div className="page-shell auth-bg">
+      <div className="container narrow">
+        <div className="card auth-card elevated">
+          <div className="feature-icon" style={{ marginBottom: 16 }}>
+            <UserPlus size={22} />
           </div>
-          <h1 className="text-4xl font-bold mb-3 text-white">
-            INITIALIZE CLEARANCE
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Create your digital identity to access the EV seminar nexus.
+          <h1>Create your account</h1>
+          <p className="muted" style={{ marginTop: 6 }}>
+            Join ZhongNeng EV to register for seminars and manage bookings.
           </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-900/30 border border-red-500 text-red-400 px-6 py-4 rounded-2xl mb-8 text-center">
-            {error}
-          </div>
-        )}
+          {error && <p className="alert alert-error">{error}</p>}
 
-        {successMsg && (
-          <div className="bg-green-900/30 border border-green-500 text-green-400 px-6 py-4 rounded-2xl mb-8 text-center">
-            {successMsg}
-          </div>
-        )}
-
-        <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
-          <form onSubmit={handleRegister} className="space-y-6">
-            {/* Entity Classification */}
+          <form onSubmit={handleSubmit} className="form-stack">
             <div>
-              <label className="block text-sm text-gray-400 mb-3">
-                ENTITY CLASSIFICATION *
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange("INDIVIDUAL")}
-                  className={`py-4 rounded-2xl flex items-center justify-center gap-2 font-medium transition-all ${
-                    activeTab === "INDIVIDUAL"
-                      ? "bg-cyan-500 text-black border border-cyan-500"
-                      : "bg-[#1a1a2e] border border-gray-700 text-gray-300 hover:border-gray-500"
-                  }`}
-                >
-                  👤 INDIVIDUAL
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleTabChange("CORPORATE")}
-                  className={`py-4 rounded-2xl flex items-center justify-center gap-2 font-medium transition-all ${
-                    activeTab === "CORPORATE"
-                      ? "bg-cyan-500 text-black border border-cyan-500"
-                      : "bg-[#1a1a2e] border border-gray-700 text-gray-300 hover:border-gray-500"
-                  }`}
-                >
-                  🏢 CORPORATE
-                </button>
-              </div>
-            </div>
-
-            {/* Designation + CommLink */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  DESIGNATION *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Enter full name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+              <label style={{ marginBottom: 6 }}>Customer Type</label>
+              <div
+                role="radiogroup"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                <CustomerTypeOption
+                  active={form.customerType === "PERSONAL"}
+                  onClick={() => updateField("customerType", "PERSONAL")}
+                  icon={<User size={18} />}
+                  title="Personal"
+                  subtitle="Individual account"
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  COMMLINK *
-                </label>
-                <input
-                  type="tel"
-                  name="telephone"
-                  placeholder="+86 138-0000-0000"
-                  value={formData.telephone}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+                <CustomerTypeOption
+                  active={form.customerType === "COMPANY"}
+                  onClick={() => updateField("customerType", "COMPANY")}
+                  icon={<Building2 size={18} />}
+                  title="Company"
+                  subtitle="Business account"
                 />
               </div>
             </div>
 
-            {/* Corporate Affiliation */}
-            {activeTab === "CORPORATE" && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  CORPORATE AFFILIATION *
-                </label>
-                <input
-                  type="text"
-                  name="organizationName"
-                  placeholder="Enter organization name"
-                  value={formData.organizationName}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
-                />
-              </div>
-            )}
+            <label>
+              Name
+              <input
+                type="text"
+                required
+                value={form.name}
+                onChange={(e) => updateField("name", e.target.value)}
+                placeholder="Your full name"
+                autoComplete="name"
+              />
+            </label>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                NETWORK ADDRESS *
-              </label>
+            <label>
+              Telephone
+              <input
+                type="tel"
+                required
+                value={form.telephone}
+                onChange={(e) => updateField("telephone", e.target.value)}
+                placeholder="91234567"
+                autoComplete="tel"
+              />
+            </label>
+
+            <label>
+              Email
               <input
                 type="email"
-                name="email"
-                placeholder="your.email@example.com"
-                value={formData.email}
-                onChange={handleChange}
                 required
-                className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+                value={form.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
               />
-            </div>
+            </label>
 
-            {/* Passwords */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  SECURITY KEY *
-                </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <label>
+                Password
                 <input
                   type="password"
-                  name="password"
+                  required
+                  value={form.password}
+                  onChange={(e) => updateField("password", e.target.value)}
                   placeholder="Min. 6 characters"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+                  autoComplete="new-password"
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  VERIFY KEY *
-                </label>
+              </label>
+              <label>
+                Confirm
                 <input
                   type="password"
-                  name="confirmPassword"
-                  placeholder="Re-enter security key"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
                   required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl px-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500"
+                  value={form.confirmPassword}
+                  onChange={(e) =>
+                    updateField("confirmPassword", e.target.value)
+                  }
+                  placeholder="Repeat password"
+                  autoComplete="new-password"
                 />
-              </div>
+              </label>
             </div>
 
             <button
+              className="btn btn-primary btn-block"
               type="submit"
               disabled={loading}
-              className="w-full bg-cyan-500 hover:bg-cyan-600 disabled:bg-gray-700 text-black font-semibold py-4 rounded-2xl text-lg mt-6 transition-all"
             >
-              {loading ? "PROCESSING..." : "PROCEED TO VERIFICATION →"}
+              <UserPlus size={16} />
+              {loading ? "Creating account..." : "Create Account & Send OTP"}
             </button>
           </form>
+
+          <p className="helper-row">
+            Already have an account? <Link to="/login">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>
+  );
+}
+
+function CustomerTypeOption({ active, onClick, icon, title, subtitle }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        textAlign: "left",
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: `1px solid ${active ? "var(--brand)" : "var(--border)"}`,
+        background: active ? "rgba(15, 118, 110, 0.06)" : "var(--surface)",
+        boxShadow: active ? "0 0 0 3px rgba(15, 118, 110, 0.12)" : "none",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        transition: "all 0.15s ease",
+      }}
+    >
+      <span
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          display: "grid",
+          placeItems: "center",
+          background: active ? "var(--brand)" : "var(--bg-soft)",
+          color: active ? "#fff" : "var(--text-soft)",
+        }}
+      >
+        {icon}
+      </span>
+      <span>
+        <strong style={{ display: "block", fontSize: 14 }}>{title}</strong>
+        <span style={{ color: "var(--muted)", fontSize: 12 }}>{subtitle}</span>
+      </span>
+    </button>
   );
 }

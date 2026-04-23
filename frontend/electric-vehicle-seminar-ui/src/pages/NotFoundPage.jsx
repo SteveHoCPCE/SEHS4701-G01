@@ -1,24 +1,28 @@
-// src/pages/NotFoundPage.jsx
 import { Link } from "react-router-dom";
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center max-w-md px-6">
-        <h1 className="text-8xl font-bold text-gray-900 mb-4">404</h1>
-        <h2 className="text-4xl font-semibold text-gray-800 mb-6">
-          Page Not Found
-        </h2>
-        <p className="text-gray-600 text-lg mb-10">
-          The page you're looking for doesn't exist.
-        </p>
-
-        <Link
-          to="/"
-          className="bg-black text-white px-8 py-4 rounded-2xl font-medium hover:bg-gray-900 transition-all"
-        >
-          Go to Home
-        </Link>
+    <div className="page-shell auth-bg">
+      <div className="container narrow" style={{ textAlign: "center" }}>
+        <div className="card elevated" style={{ padding: 48 }}>
+          <h1
+            style={{
+              fontSize: 72,
+              color: "var(--brand)",
+              marginBottom: 8,
+              fontWeight: 800,
+            }}
+          >
+            404
+          </h1>
+          <h2 style={{ marginBottom: 12 }}>Page not found</h2>
+          <p style={{ marginBottom: 24 }}>
+            The page you're looking for doesn't exist or has been moved.
+          </p>
+          <Link to="/" className="btn btn-primary">
+            Back to home
+          </Link>
+        </div>
       </div>
     </div>
   );

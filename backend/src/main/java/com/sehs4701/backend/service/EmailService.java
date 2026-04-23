@@ -14,9 +14,8 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Async
-    public void sendVerificationEmail(String to, String otpCode) {
-        sendEmail(to, "Email Verification - EV Seminar Registration",
+    public void sendVerificationEmailOrThrow(String to, String otpCode) {
+        sendEmailOrThrow(to, "Email Verification - EV Seminar Registration",
                 "Welcome to the EV Seminar Registration System!\n\n" +
                 "Your verification code is: " + otpCode + "\n\n" +
                 "This code will expire in 5 minutes.\n" +
@@ -25,7 +24,7 @@ public class EmailService {
 
     @Async
     public void sendRegistrationSuccess(String to, String customerName) {
-        sendEmail(to, "Registration Successful - EV Seminar Registration",
+        sendEmailBestEffort(to, "Registration Successful - EV Seminar Registration",
                 "Dear " + customerName + ",\n\n" +
                 "Your membership registration has been completed successfully.\n" +
                 "You can now login with your email to register for EV seminars.\n\n" +
@@ -34,7 +33,7 @@ public class EmailService {
 
     @Async
     public void sendSeminarRegistrationSuccess(String to, String customerName, String vehicleModel, String seminarDate, int seats) {
-        sendEmail(to, "Seminar Registration Confirmed",
+        sendEmailBestEffort(to, "Seminar Registration Confirmed",
                 "Dear " + customerName + ",\n\n" +
                 "Your seminar registration has been confirmed with status: SUCCESS\n\n" +
                 "Details:\n" +
@@ -46,7 +45,7 @@ public class EmailService {
 
     @Async
     public void sendSeminarRegistrationWait(String to, String customerName, String vehicleModel, String seminarDate, int seats) {
-        sendEmail(to, "Seminar Registration - Waitlisted",
+        sendEmailBestEffort(to, "Seminar Registration - Waitlisted",
                 "Dear " + customerName + ",\n\n" +
                 "Your seminar registration has been placed on the waitlist.\n\n" +
                 "Details:\n" +
@@ -58,7 +57,7 @@ public class EmailService {
 
     @Async
     public void sendCancellationNotice(String to, String customerName, String vehicleModel, String seminarDate) {
-        sendEmail(to, "Seminar Registration Cancelled",
+        sendEmailBestEffort(to, "Seminar Registration Cancelled",
                 "Dear " + customerName + ",\n\n" +
                 "Your seminar registration has been cancelled.\n\n" +
                 "Details:\n" +
@@ -69,7 +68,7 @@ public class EmailService {
 
     @Async
     public void sendWaitlistPromotion(String to, String customerName, String vehicleModel, String seminarDate, int seats) {
-        sendEmail(to, "Seminar Registration - You're In!",
+        sendEmailBestEffort(to, "Seminar Registration - You're In!",
                 "Dear " + customerName + ",\n\n" +
                 "Great news! Your registration status has been upgraded from WAIT to SUCCESS.\n\n" +
                 "Details:\n" +
@@ -79,14 +78,18 @@ public class EmailService {
                 "We look forward to seeing you!");
     }
 
-    private void sendEmail(String to, String subject, String text) {
+    private void sendEmailOrThrow(String to, String subject, String text) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject(subject);
+        message.setText(text);
+        mailSender.send(message);
+        log.info("Email sent to {} with subject: {}", to, subject);
+    }
+
+    private void sendEmailBestEffort(String to, String subject, String text) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(to);
-            message.setSubject(subject);
-            message.setText(text);
-            mailSender.send(message);
-            log.info("Email sent to {} with subject: {}", to, subject);
+            sendEmailOrThrow(to, subject, text);
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
         }

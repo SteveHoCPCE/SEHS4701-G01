@@ -1,16 +1,14 @@
-// src/App.jsx
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from "./context/useAuth";
 
-// Layout
 import MainLayout from "./components/layout/MainLayout";
 
-// Pages
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -20,20 +18,16 @@ import MyRegistrationsPage from "./pages/MyRegistrationsPage";
 import DashboardPage from "./pages/DashboardPage";
 import EVCatalogPage from "./pages/EVCatalogPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import RegistrationDetailPage from "./pages/RegistrationDetailPage";
 
-// Protected Route Component
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white">
-        Loading...
-      </div>
-    );
+    return <div className="page-shell centered">Loading...</div>;
   }
 
-  return user ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
 export default function App() {
@@ -41,14 +35,13 @@ export default function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Pages with Navbar + Footer */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/catalog" element={<EVCatalogPage />} />
+            <Route path="/vehicles" element={<EVCatalogPage />} />
+            <Route path="/catalog" element={<Navigate to="/vehicles" replace />} />
 
-            {/* Protected Routes */}
             <Route
               path="/dashboard"
               element={
@@ -58,12 +51,16 @@ export default function App() {
               }
             />
             <Route
-              path="/seminar-register"
+              path="/seminars"
               element={
                 <ProtectedRoute>
                   <SeminarRegistrationPage />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/seminar-register"
+              element={<Navigate to="/seminars" replace />}
             />
             <Route
               path="/my-registrations"
@@ -73,12 +70,18 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/my-registrations/:id"
+              element={
+                <ProtectedRoute>
+                  <RegistrationDetailPage />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
-          {/* Verification Page - No layout */}
           <Route path="/verify" element={<VerificationPage />} />
 
-          {/* 404 */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>

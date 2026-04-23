@@ -1,262 +1,205 @@
-// src/pages/SeminarRegistrationPage.jsx
-import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CalendarCheck, TicketCheck } from "lucide-react";
 import { seminarService } from "../api/seminarService";
 
+function formatDateTime(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function SeminarRegistrationPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-
   const [seminars, setSeminars] = useState([]);
+  const [selectedSeminarId, setSelectedSeminarId] = useState(null);
+  const [seatsBooked, setSeatsBooked] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [selectedSeminar, setSelectedSeminar] = useState(null);
-  const [seatsToRegister, setSeatsToRegister] = useState(1);
-  const [successMessage, setSuccessMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [registering, setRegistering] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
-  // Redirect if not logged in
-  useEffect(() => {
-    if (!user) {
-      navigate("/login", { replace: true });
-    }
-  }, [user, navigate]);
-
-  const fetchSeminars = async () => {
+  const loadSeminars = useCallback(async (preserveSelection = true) => {
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
       const response = await seminarService.getUpcomingSeminars();
-      setSeminars(response.data || []);
-    } catch (err) {
-      console.error(err);
-      setSeminars([]);
+      const list = response.data || [];
+      setSeminars(list);
+      if (list.length) {
+        setSelectedSeminarId((prev) => {
+          if (!preserveSelection) {
+            return list[0].id;
+          }
+          return prev ?? list[0].id;
+        });
+      }
+    } catch {
+      setError("Failed to load upcoming seminars.");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchSeminars();
   }, []);
 
-  const handleCompleteRegistration = async () => {
+  useEffect(() => {
+    loadSeminars(false);
+  }, [loadSeminars]);
+
+  const selectedSeminar = seminars.find(
+    (seminar) => seminar.id === selectedSeminarId
+  );
+
+  async function handleSubmit(e) {
+    e.preventDefault();
     if (!selectedSeminar) return;
-
-    setRegistering(true);
-    setErrorMessage("");
-    setSuccessMessage("");
-
+    setSubmitting(true);
+    setMessage("");
+    setError("");
     try {
       const response = await seminarService.registerForSeminar(
         selectedSeminar.id,
-        { seatsBooked: seatsToRegister },
+        { seatsBooked }
       );
-
-      setSuccessMessage(
-        response.data.message ||
-          (response.data.status === "WAIT"
-            ? "Added to waitlist!"
-            : "Registration successful!"),
-      );
-
-      // Refresh seminar list to update seats / waitlist status
-      await fetchSeminars();
-
-      // Auto redirect to My Registrations after success
-      setTimeout(() => {
-        navigate("/my-registrations");
-      }, 1500);
-    } catch (err) {
-      console.error("Registration error:", err.response?.data);
-
-      const msg =
-        err.response?.data?.message || "Registration failed. Please try again.";
-
-      if (msg.includes("verified")) {
-        setErrorMessage("Your email needs verification before registering.");
+      const status = response.data?.status;
+      if (status === "WAIT") {
+        setMessage(
+          "Seminar is full — you have been added to the waitlist. We’ll email you if a seat opens."
+        );
       } else {
-        setErrorMessage(msg);
+        setMessage(
+          "Registration confirmed! A confirmation email has been sent to your inbox."
+        );
       }
+      await loadSeminars();
+      setTimeout(() => navigate("/my-registrations"), 1100);
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed.");
     } finally {
-      setRegistering(false);
+      setSubmitting(false);
     }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-28">
-        Loading seminars...
-      </div>
-    );
   }
 
+  if (loading)
+    return (
+      <div className="page-shell centered">Loading upcoming seminars...</div>
+    );
+
   return (
-    <div className="bg-gray-50 min-h-screen pt-24 pb-16">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold text-gray-900">
-            Electric Vehicle Seminar Registration
-          </h1>
-          <p className="text-xl text-gray-600 mt-2">
-            Register for upcoming seminars and experience our electric vehicles
-            firsthand
+    <div className="page-shell">
+      <div className="container section">
+        <div className="section-header">
+          <h1>Book a seminar</h1>
+          <p>
+            Reserve 1 or 2 seats for an upcoming seminar. Full seminars
+            automatically place you on the waitlist.
           </p>
         </div>
 
-        {successMessage && (
-          <div className="mb-8 px-6 py-4 bg-green-100 text-green-700 rounded-2xl">
-            {successMessage}
-          </div>
-        )}
-        {errorMessage && (
-          <div className="mb-8 px-6 py-4 bg-red-100 text-red-700 rounded-2xl">
-            {errorMessage}
-          </div>
-        )}
+        <div className="split">
+          <div className="card">
+            <h2>Upcoming seminars</h2>
+            <p className="muted" style={{ marginTop: 4, fontSize: 14 }}>
+              Showing only future seminars.
+            </p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left - Seminars */}
-          <div className="lg:col-span-7">
-            <h2 className="text-2xl font-semibold mb-6">Upcoming Seminars</h2>
-            <p className="text-gray-600 mb-8">Select a seminar to register</p>
-
-            <div className="space-y-6">
-              {seminars.map((seminar) => {
-                const avail = seminar.availableSeats || 0;
-                const total = seminar.maxSeats || 50;
-                const progress = Math.round(((total - avail) / total) * 100);
-
-                return (
-                  <div
-                    key={seminar.id}
-                    onClick={() => setSelectedSeminar(seminar)}
-                    className={`bg-white border rounded-3xl p-6 cursor-pointer hover:shadow-md transition-all ${
-                      selectedSeminar?.id === seminar.id
-                        ? "border-blue-600"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <div className="flex justify-between">
-                      <h3 className="font-semibold text-xl">
-                        {seminar.vehicleModelNumber}
-                      </h3>
-                      <span
-                        className={`px-4 py-1 rounded-full text-sm font-medium ${
-                          avail > 0
-                            ? "bg-green-100 text-green-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {avail > 0
-                          ? `${avail} seats available`
-                          : "Waitlisted : 0"}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 mt-1">
-                      Experience our latest EV model
-                    </p>
-
-                    <div className="mt-4 flex gap-6 text-sm text-gray-500">
-                      <div>
-                        📅 {new Date(seminar.seminarDate).toLocaleDateString()}
-                      </div>
-                      <div>
-                        🕒{" "}
-                        {new Date(seminar.seminarDate).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="mt-6 h-2 bg-gray-200 rounded-full">
-                      <div
-                        className="h-full bg-blue-600 rounded-full"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Right - Registration Details */}
-          <div className="lg:col-span-5">
-            <div className="bg-white rounded-3xl p-8 sticky top-8 border border-gray-100">
-              <h3 className="font-semibold text-xl mb-2">
-                Registration Details
-              </h3>
-              <p className="text-gray-600 mb-8">
-                Complete your seminar registration
+            {seminars.length === 0 ? (
+              <p className="muted" style={{ marginTop: 12 }}>
+                No upcoming seminars available.
               </p>
+            ) : (
+              <div className="seminar-list">
+                {seminars.map((seminar) => {
+                  const isFull = seminar.availableSeats <= 0;
+                  return (
+                    <button
+                      type="button"
+                      key={seminar.id}
+                      className={`seminar-item ${
+                        selectedSeminarId === seminar.id ? "selected" : ""
+                      }`}
+                      onClick={() => setSelectedSeminarId(seminar.id)}
+                    >
+                      <div>
+                        <strong>{seminar.vehicleModelNumber}</strong>
+                        <p>{seminar.vehicleDescription}</p>
+                      </div>
+                      <div className="seminar-meta">
+                        <span>
+                          <CalendarCheck
+                            size={13}
+                            style={{ verticalAlign: -2, marginRight: 4 }}
+                          />
+                          {formatDateTime(seminar.seminarDate)}
+                        </span>
+                        <span>
+                          <strong>{seminar.availableSeats}</strong> / {seminar.maxSeats}{" "}
+                          {isFull ? "(waitlist)" : "seats"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-              {selectedSeminar ? (
-                <>
-                  <div className="bg-blue-50 p-6 rounded-2xl mb-8">
-                    <p className="text-sm text-gray-500">Selected Seminar</p>
-                    <p className="font-semibold text-lg">
-                      {selectedSeminar.vehicleModelNumber}
-                    </p>
+          <div className="card elevated">
+            <h2>Registration details</h2>
+
+            {error && <p className="alert alert-error">{error}</p>}
+            {message && <p className="alert alert-success">{message}</p>}
+
+            {selectedSeminar ? (
+              <form onSubmit={handleSubmit} className="form-stack">
+                <div className="detail-grid" style={{ marginTop: 4 }}>
+                  <div className="detail-row">
+                    <span>Vehicle</span>
+                    <strong>{selectedSeminar.vehicleModelNumber}</strong>
                   </div>
-
-                  <div className="mb-8">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Number of Seats
-                    </label>
-                    <div className="flex gap-3">
-                      {[1, 2].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setSeatsToRegister(n)}
-                          className={`flex-1 py-4 rounded-2xl border ${
-                            seatsToRegister === n
-                              ? "border-blue-600 bg-blue-50"
-                              : "border-gray-300"
-                          }`}
-                        >
-                          {n} Seat{n > 1 ? "s" : ""}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="detail-row">
+                    <span>Date &amp; Time</span>
+                    <strong>{formatDateTime(selectedSeminar.seminarDate)}</strong>
                   </div>
-
-                  {/* Important Notes - Figma Style */}
-                  <div className="bg-yellow-50 border border-yellow-200 p-5 rounded-2xl text-sm mb-8">
-                    <p className="font-medium mb-3 flex items-center gap-2">
-                      <span>ℹ️</span> Important Notes:
-                    </p>
-                    <ul className="list-disc list-inside space-y-1.5 text-gray-700">
-                      <li>
-                        Confirmation email will be sent upon successful
-                        registration
-                      </li>
-                      <li>
-                        If the seminar is full, you will be added to the
-                        waitlist
-                      </li>
-                      <li>
-                        You can cancel your registration anytime before the
-                        event
-                      </li>
-                    </ul>
+                  <div className="detail-row">
+                    <span>Available Seats</span>
+                    <strong>
+                      {selectedSeminar.availableSeats} / {selectedSeminar.maxSeats}
+                    </strong>
                   </div>
-
-                  <button
-                    onClick={handleCompleteRegistration}
-                    disabled={registering}
-                    className="w-full bg-black text-white py-4 rounded-2xl font-semibold hover:bg-gray-900 disabled:bg-gray-400"
-                  >
-                    {registering ? "Processing..." : "Complete Registration"}
-                  </button>
-                </>
-              ) : (
-                <div className="text-center py-20 text-gray-400">
-                  Select a seminar from the list
                 </div>
-              )}
-            </div>
+
+                <label>
+                  Seats to Reserve
+                  <select
+                    value={seatsBooked}
+                    onChange={(e) => setSeatsBooked(Number(e.target.value))}
+                  >
+                    <option value={1}>1 seat</option>
+                    <option value={2}>2 seats</option>
+                  </select>
+                </label>
+
+                <button
+                  className="btn btn-primary btn-block"
+                  type="submit"
+                  disabled={submitting}
+                >
+                  <TicketCheck size={16} />
+                  {submitting ? "Submitting..." : "Confirm registration"}
+                </button>
+                <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  If the seminar is full, you’ll be added to the waitlist and
+                  promoted automatically when a seat opens.
+                </p>
+              </form>
+            ) : (
+              <p className="muted">Select a seminar to continue.</p>
+            )}
           </div>
         </div>
       </div>

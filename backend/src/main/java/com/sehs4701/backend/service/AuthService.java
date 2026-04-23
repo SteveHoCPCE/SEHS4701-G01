@@ -12,6 +12,7 @@ import com.sehs4701.backend.repository.CustomerRepository;
 import com.sehs4701.backend.repository.EmailVerificationRepository;
 import com.sehs4701.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final CustomerRepository customerRepository;
@@ -53,7 +55,7 @@ public class AuthService {
                 existingCustomer.setEmailVerified(false);
 
                 customerRepository.save(existingCustomer);
-                System.out.println("Updated existing unverified customer. New OTP will be sent to: " + request.getEmail());
+                log.info("Updated unverified customer and regenerated OTP for {}", request.getEmail());
             }
         } else {
             // Normal new registration
@@ -80,13 +82,17 @@ public class AuthService {
 
         verificationRepository.save(verification);
 
-        emailService.sendVerificationEmail(request.getEmail(), otpCode);
+        try {
+            emailService.sendVerificationEmailOrThrow(request.getEmail(), otpCode);
+        } catch (Exception e) {
+            throw new BadRequestException("Unable to send verification email. Please check your network or mail settings and try again.");
+        }
 
         return "Registration successful. Please check your email for the verification code.";
     }
 
     @Transactional
-    public String verifyEmail(VerifyEmailRequest request) {
+    public AuthResponse verifyEmail(VerifyEmailRequest request) {
         Customer customer = customerRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
@@ -114,7 +120,15 @@ public class AuthService {
 
         emailService.sendRegistrationSuccess(customer.getEmail(), customer.getName());
 
-        return "Email verified successfully. You can now login.";
+        // Auto-login: issue a JWT so the frontend can sign the user in immediately
+        String token = jwtUtil.generateToken(customer.getEmail());
+
+        return AuthResponse.builder()
+                .token(token)
+                .email(customer.getEmail())
+                .name(customer.getName())
+                .verified(true)
+                .build();
     }
 
     public AuthResponse login(LoginRequest request) {

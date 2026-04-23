@@ -32,10 +32,7 @@ export const seminarService = {
     return api.put(`/api/registrations/${registrationId}/cancel`);
   },
 
-  /**
-   * Get single seminar by ID (if needed later)
-   */
-  getSeminarById: async (seminarId) => {
-    return api.get(`/api/seminars/${seminarId}`);
+  getRegistrationById: async (registrationId) => {
+    return api.get(`/api/registrations/${registrationId}`);
   },
 };

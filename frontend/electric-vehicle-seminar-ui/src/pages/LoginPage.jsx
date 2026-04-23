@@ -1,172 +1,111 @@
-// src/pages/LoginPage.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LogIn, Lock } from "lucide-react";
 import { authService } from "../api/authService";
-import { Mail, Lock } from "lucide-react";
+import { useAuth } from "../context/useAuth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login: contextLogin } = useAuth();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
+  const location = useLocation();
+  const { login } = useAuth();
+  const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const flashMessage = location.state?.message;
 
-  const handleLogin = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
-      console.log("Attempting login with:", formData.email);
-
       const response = await authService.login({
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
       });
-
-      console.log("🔍 Full login response from backend:", response.data);
-
-      // Support both possible field names (verified or isVerified)
-      const isVerifiedFromBackend =
-        response.data.verified !== undefined
-          ? response.data.verified
-          : response.data.isVerified !== undefined
-            ? response.data.isVerified
-            : false;
 
       const userData = {
         email: response.data.email,
-        name: response.data.name || "User",
-        isVerified: isVerifiedFromBackend,
+        name: response.data.name,
+        verified: response.data.verified,
         token: response.data.token,
       };
 
-      // Save to localStorage
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(userData));
+      login(userData);
 
-      // Update AuthContext
-      contextLogin(userData);
-
-      // Check verification status
-      if (!userData.isVerified) {
-        setError("Please verify your email address before logging in.");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        console.log("❌ User is not verified - blocking login");
+      if (!userData.verified) {
+        localStorage.setItem("pendingEmail", userData.email);
+        navigate("/verify", {
+          state: { email: userData.email },
+          replace: true,
+        });
         return;
       }
 
-      console.log("✅ Login successful! Redirecting to dashboard...");
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      console.error("Login error:", err.response?.data || err.message);
-      const serverMsg = err.response?.data?.message;
-      setError(serverMsg || "Invalid email or password. Please try again.");
+      setError(err.response?.data?.message || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center py-12 px-6">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-[#1a1a2e] border border-cyan-500/30 rounded-full px-6 py-2 text-sm mb-6">
-            <span className="text-cyan-400">●</span>
-            SYSTEM PROTOCOL ACTIVE
+    <div className="page-shell auth-bg">
+      <div className="container narrow">
+        <div className="card auth-card elevated">
+          <div className="feature-icon" style={{ marginBottom: 16 }}>
+            <Lock size={22} />
           </div>
-          <h1 className="text-4xl font-bold mb-3">SYSTEM LOGIN</h1>
-          <p className="text-gray-400 text-lg">
-            Authenticate to access the EV seminar nexus
+          <h1>Welcome back</h1>
+          <p className="muted" style={{ marginTop: 6 }}>
+            Sign in to manage your seminars and registration history.
           </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-900/30 border border-red-500 text-red-400 px-6 py-4 rounded-2xl mb-8 text-center">
-            {error}
-          </div>
-        )}
+          {flashMessage && <p className="alert alert-success">{flashMessage}</p>}
+          {error && <p className="alert alert-error">{error}</p>}
 
-        <div className="bg-[#12121a] border border-gray-800 rounded-3xl p-10">
-          <form onSubmit={handleLogin} className="space-y-8">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                NETWORK ADDRESS
-              </label>
-              <div className="relative">
-                <Mail
-                  className="absolute left-5 top-4.5 text-gray-500"
-                  size={20}
-                />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="your.email@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl pl-12 pr-5 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
-                />
-              </div>
-            </div>
+          <form onSubmit={handleSubmit} className="form-stack">
+            <label>
+              Email
+              <input
+                type="email"
+                required
+                value={form.email}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, email: e.target.value }))
+                }
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
+            </label>
 
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                SECURITY KEY
-              </label>
-              <div className="relative">
-                <Lock
-                  className="absolute left-5 top-4.5 text-gray-500"
-                  size={20}
-                />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Enter security key"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-[#1a1a2e] border border-gray-700 rounded-2xl pl-12 pr-12 py-4 text-white placeholder-gray-500 focus:border-cyan-500 outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-4.5 text-gray-500 hover:text-gray-300"
-                >
-                  {showPassword ? "🙈" : "👁️"}
-                </button>
-              </div>
-            </div>
+            <label>
+              Password
+              <input
+                type="password"
+                required
+                value={form.password}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, password: e.target.value }))
+                }
+                placeholder="Enter your password"
+                autoComplete="current-password"
+              />
+            </label>
 
             <button
+              className="btn btn-primary btn-block"
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:bg-gray-700 text-white font-semibold py-4 rounded-2xl transition-all text-lg mt-4 flex items-center justify-center gap-2"
             >
-              {loading ? "AUTHENTICATING..." : "AUTHENTICATE →"}
+              <LogIn size={16} />
+              {loading ? "Signing in..." : "Sign in"}
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-8">
-            New to the system?{" "}
-            <span
-              onClick={() => navigate("/register")}
-              className="text-cyan-400 hover:underline cursor-pointer"
-            >
-              Initialize clearance
-            </span>
+          <p className="helper-row">
+            New here? <Link to="/register">Create a free account</Link>
           </p>
         </div>
       </div>

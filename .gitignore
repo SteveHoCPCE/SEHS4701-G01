@@ -1,49 +1,34 @@
-# ===== Spring Boot / Maven =====
+# Build output
 backend/target/
-backend/.mvn/
-backend/*.log
-*.jar
+frontend/electric-vehicle-seminar-ui/dist/
+frontend/electric-vehicle-seminar-ui/build/
 
-# ===== Environment & Secrets =====
+# Dependencies
+node_modules/
+
+# Environment & secrets
 .env
-.env.local
-.env.*.local
+.env.*
 *.env
 application-local.yml
 application-prod.yml
 
-# ===== IDE =====
+# IDE / Editor
 .idea/
-*.iml
 .vscode/
+.claude/
+*.iml
 *.swp
 *.swo
 
-# ===== OS =====
+# OS
 .DS_Store
 Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
 
-# ===== Node.js / React Frontend =====
-frontend/electric-vehicle-seminar-ui/node_modules/
-frontend/electric-vehicle-seminar-ui/dist/
-frontend/electric-vehicle-seminar-ui/.vite/
-frontend/electric-vehicle-seminar-ui/.env*
-frontend/electric-vehicle-seminar-ui/build/
-
-# ===== Logs =====
+# Logs
 *.log
 logs/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# ===== Misc =====
-.claude/
-CLAUDE.md
-*.ctxt
-.mtj.tmp/
+# JVM crash dumps
 hs_err_pid*
 replay_pid*
