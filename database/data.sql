@@ -27,7 +27,7 @@ INSERT IGNORE INTO vehicle (id, model_number, description, picture_url, features
 -- Seminars (7 upcoming seminars)
 INSERT IGNORE INTO seminar (id, vehicle_id, seminar_date, max_seats) VALUES
 (1, 1, '2026-05-10 14:00:00', 30),
-(2, 2, '2026-05-15 10:00:00', 20),
+(2, 2, '2026-05-15 10:00:00', 2),
 (3, 3, '2026-05-20 14:00:00', 25),
 (4, 4, '2026-05-25 10:00:00', 15),
 (5, 5, '2026-06-01 14:00:00', 30),
