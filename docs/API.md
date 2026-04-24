@@ -141,6 +141,8 @@ No auth required.
 | email | string | Customer's email |
 | name | string | Customer's name |
 
+**Error (400):** Email is not verified yet.
+
 **Error (401):** Invalid email or password.
 
 ---

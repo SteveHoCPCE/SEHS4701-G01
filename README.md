@@ -59,39 +59,29 @@ brew services start mysql              # macOS
 mysql -u root < database/schema.sql
 ```
 
-### 2. Configure `application.yml`
+### 2. Configure environment variables
 
-Open [`backend/src/main/resources/application.yml`](backend/src/main/resources/application.yml) and update the following:
+Copy the backend environment template:
 
-    username: root
-    password: ""
-**Database password** (leave empty `""` if no password):
-
-```yaml
-spring:
-  datasource:
-    password: "your-mysql-password"
+```bash
+cp backend/.env.example backend/.env
 ```
 
-**Gmail credentials** for OTP emails ([how to get App Password](https://www.youtube.com/watch?v=ZfEK3WP73eY)):
+Edit `backend/.env`.
 
-```yaml
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME=your_google_email}
-    password: ${MAIL_PASSWORD=16-digit-app-password-no-spaces}
+**Gmail credentials** for OTP emails:
+
+```env
+MAIL_USERNAME=your_google_email@gmail.com
+MAIL_PASSWORD=your_16_character_gmail_app_password
 ```
 
-Alternatively, set them as environment variables (see [Environment Variables](#environment-variables)).
+Use a Gmail **App Password**, not your normal Google password. If MySQL root has a password, set `DB_PASSWORD` in the same file.
 
 ### 3. Run the backend
 
 ```bash
 cd backend
-export MAIL_USERNAME=your@gmail.com
-export MAIL_PASSWORD="xxxx xxxx xxxx xxxx"   # Gmail App Password
-# export DB_PASSWORD=...                     # only if MySQL root has a password
 mvn spring-boot:run
 ```
 
@@ -174,8 +164,7 @@ lsof -ti:8080 | xargs kill -9
 
 **Can't send email / OTP**
 
-Check `MAIL_USERNAME` / `MAIL_PASSWORD`. If your network blocks SMTP, read the
-OTP directly from the database:
+Check `backend/.env` has `MAIL_USERNAME` and a valid Gmail App Password in `MAIL_PASSWORD`. If your network blocks SMTP, the system keeps the OTP in MySQL for local testing:
 
 ```bash
 mysql -u root -e "USE sehs4701; \

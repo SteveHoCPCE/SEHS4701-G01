@@ -21,6 +21,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RegistrationService {
 
+    private static final List<RegistrationStatus> ACTIVE_STATUSES = List.of(
+            RegistrationStatus.SUCCESS,
+            RegistrationStatus.WAIT);
+
     private final RegistrationRepository registrationRepository;
     private final SeminarRepository seminarRepository;
     private final CustomerRepository customerRepository;
@@ -41,6 +45,11 @@ public class RegistrationService {
 
         if (seminar.getSeminarDate().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Cannot register for a past seminar");
+        }
+
+        if (registrationRepository.existsByCustomerIdAndSeminarIdAndStatusIn(
+                customer.getId(), seminarId, ACTIVE_STATUSES)) {
+            throw new BadRequestException("You already have an active registration for this seminar");
         }
 
         // Calculate current booked seats (only SUCCESS registrations count)
@@ -88,6 +97,10 @@ public class RegistrationService {
 
         if (registration.getStatus() == RegistrationStatus.CANCEL) {
             throw new BadRequestException("Registration is already cancelled");
+        }
+
+        if (registration.getSeminar().getSeminarDate().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Cannot cancel a registration after the seminar has started");
         }
 
         RegistrationStatus previousStatus = registration.getStatus();
@@ -152,7 +165,7 @@ public class RegistrationService {
 
         LocalDateTime oneYearAgo = LocalDateTime.now().minusYears(1);
         return registrationRepository
-                .findByCustomerIdAndCreatedAtAfterOrderByCreatedAtDesc(customer.getId(), oneYearAgo)
+                .findByCustomerIdAndSeminarSeminarDateAfterOrderBySeminarSeminarDateDesc(customer.getId(), oneYearAgo)
                 .stream()
                 .map(this::toResponse)
                 .toList();
