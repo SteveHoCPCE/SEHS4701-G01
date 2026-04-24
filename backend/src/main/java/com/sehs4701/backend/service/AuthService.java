@@ -38,54 +38,56 @@ public class AuthService {
 
     @Transactional
     public String register(RegisterRequest request) {
+        String email = normalizeEmail(request.getEmail());
         // === UPDATED: Allow re-registration and send new OTP if previous registration was not verified ===
         // This fixes the issue where you couldn't register again after failing or skipping OTP
-        Customer existingCustomer = customerRepository.findByEmail(request.getEmail()).orElse(null);
+        Customer customer = customerRepository.findByEmail(email).orElse(null);
 
-        if (existingCustomer != null) {
-            if (existingCustomer.isEmailVerified()) {
+        if (customer != null) {
+            if (customer.isEmailVerified()) {
                 // Already successfully verified → block as normal
                 throw new BadRequestException("Email already registered and verified. Please login.");
             } else {
                 // Not verified → update the existing customer with new details and generate new OTP
-                existingCustomer.setName(request.getName());
-                existingCustomer.setTelephone(request.getTelephone());
-                existingCustomer.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-                existingCustomer.setCustomerType(request.getCustomerType());
-                existingCustomer.setEmailVerified(false);
+                customer.setName(request.getName().trim());
+                customer.setTelephone(request.getTelephone().trim());
+                customer.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+                customer.setCustomerType(request.getCustomerType());
+                customer.setEmailVerified(false);
 
-                customerRepository.save(existingCustomer);
-                log.info("Updated unverified customer and regenerated OTP for {}", request.getEmail());
+                customer = customerRepository.save(customer);
+                log.info("Updated unverified customer and regenerated OTP for {}", email);
             }
         } else {
             // Normal new registration
-            Customer customer = Customer.builder()
-                    .name(request.getName())
-                    .telephone(request.getTelephone())
-                    .email(request.getEmail())
+            customer = Customer.builder()
+                    .name(request.getName().trim())
+                    .telephone(request.getTelephone().trim())
+                    .email(email)
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .customerType(request.getCustomerType())
                     .emailVerified(false)
                     .build();
 
-            customerRepository.save(customer);
+            customer = customerRepository.save(customer);
         }
 
         // Always generate and send a NEW OTP
         String otpCode = generateOtp();
         EmailVerification verification = EmailVerification.builder()
-                .customer(existingCustomer != null ? existingCustomer : customerRepository.findByEmail(request.getEmail()).orElseThrow())
+                .customer(customer)
                 .otpCode(otpCode)
-                .expiresAt(LocalDateTime.now().plusMinutes(5))
+                .expiresAt(LocalDateTime.now().plusMinutes(10))
                 .verified(false)
                 .build();
 
         verificationRepository.save(verification);
 
         try {
-            emailService.sendVerificationEmailOrThrow(request.getEmail(), otpCode);
+            emailService.sendVerificationEmailOrThrow(email, otpCode);
         } catch (Exception e) {
-            throw new BadRequestException("Unable to send verification email. Please check your network or mail settings and try again.");
+            log.warn("Unable to send verification email to {}. Keeping OTP record for local verification.", email, e);
+            return "Registration successful, but the verification email could not be sent. Please retrieve the OTP from the database.";
         }
 
         return "Registration successful. Please check your email for the verification code.";
@@ -93,7 +95,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse verifyEmail(VerifyEmailRequest request) {
-        Customer customer = customerRepository.findByEmail(request.getEmail())
+        String email = normalizeEmail(request.getEmail());
+        Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
         if (customer.isEmailVerified()) {
@@ -132,12 +135,17 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        String email = normalizeEmail(request.getEmail());
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(email, request.getPassword())
         );
 
-        Customer customer = customerRepository.findByEmail(request.getEmail())
+        Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
+
+        if (!customer.isEmailVerified()) {
+            throw new BadRequestException("Please verify your email before logging in");
+        }
 
         String token = jwtUtil.generateToken(customer.getEmail());
 
@@ -152,5 +160,9 @@ public class AuthService {
     private String generateOtp() {
         int otp = 100000 + RANDOM.nextInt(900000);
         return String.valueOf(otp);
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
     }
 }

@@ -28,6 +28,19 @@ CREATE TABLE IF NOT EXISTS email_verification (
     FOREIGN KEY (customer_id) REFERENCES customer(id)
 );
 
+-- Email acknowledgement log table
+CREATE TABLE IF NOT EXISTS email_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    recipient VARCHAR(255) NOT NULL,
+    email_type VARCHAR(50) NOT NULL,
+    subject VARCHAR(200) NOT NULL,
+    body TEXT,
+    status VARCHAR(20) NOT NULL,
+    error_message TEXT,
+    sent_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Vehicle table
 CREATE TABLE IF NOT EXISTS vehicle (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -68,3 +81,5 @@ CREATE INDEX idx_seminar_date ON seminar(seminar_date);
 CREATE INDEX idx_registration_customer ON registration(customer_id);
 CREATE INDEX idx_registration_seminar ON registration(seminar_id);
 CREATE INDEX idx_registration_status ON registration(status);
+CREATE INDEX idx_email_log_recipient ON email_log(recipient);
+CREATE INDEX idx_email_log_type ON email_log(email_type);

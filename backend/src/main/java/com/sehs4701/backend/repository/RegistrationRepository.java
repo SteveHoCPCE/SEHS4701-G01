@@ -17,7 +17,8 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 
     List<Registration> findBySeminarIdAndStatusOrderByCreatedAtAsc(Long seminarId, RegistrationStatus status);
 
-    List<Registration> findByCustomerIdAndCreatedAtAfterOrderByCreatedAtDesc(Long customerId, LocalDateTime after);
+    List<Registration> findByCustomerIdAndSeminarSeminarDateAfterOrderBySeminarSeminarDateDesc(
+            Long customerId, LocalDateTime after);
 
     Optional<Registration> findByIdAndCustomerId(Long id, Long customerId);
 
@@ -31,6 +32,9 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 
     // Check if customer already registered for a seminar
     List<Registration> findByCustomerIdAndSeminarId(Long customerId, Long seminarId);
+
+    boolean existsByCustomerIdAndSeminarIdAndStatusIn(
+            Long customerId, Long seminarId, List<RegistrationStatus> statuses);
 
     // Get active (non-cancelled) registrations for a seminar
     List<Registration> findBySeminarIdAndStatusInOrderByCreatedAtAsc(

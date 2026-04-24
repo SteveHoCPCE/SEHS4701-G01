@@ -37,6 +37,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     const normalizedEmail = form.email.trim().toLowerCase();
+    localStorage.removeItem("pendingEmail");
     try {
       await authService.register({
         name: form.name.trim(),
