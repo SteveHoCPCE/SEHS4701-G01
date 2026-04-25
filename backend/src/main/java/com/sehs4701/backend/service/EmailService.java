@@ -1,11 +1,15 @@
 package com.sehs4701.backend.service;
 
+import com.sehs4701.backend.entity.EmailLog;
+import com.sehs4701.backend.repository.EmailLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -13,18 +17,22 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final EmailLogRepository emailLogRepository;
+
+    @Value("${spring.mail.username:}")
+    private String fromAddress;
 
     public void sendVerificationEmailOrThrow(String to, String otpCode) {
-        sendEmailOrThrow(to, "Email Verification - EV Seminar Registration",
+        sendEmailOrThrow(to, "MembershipVerification", "Email Verification - EV Seminar Registration",
                 "Welcome to the EV Seminar Registration System!\n\n" +
                 "Your verification code is: " + otpCode + "\n\n" +
-                "This code will expire in 5 minutes.\n" +
+                "This code will expire in 10 minutes.\n" +
                 "Please enter this code to verify your email address.");
     }
 
     @Async
     public void sendRegistrationSuccess(String to, String customerName) {
-        sendEmailBestEffort(to, "Registration Successful - EV Seminar Registration",
+        sendEmailBestEffort(to, "MembershipSuccess", "Registration Successful - EV Seminar Registration",
                 "Dear " + customerName + ",\n\n" +
                 "Your membership registration has been completed successfully.\n" +
                 "You can now login with your email to register for EV seminars.\n\n" +
@@ -33,7 +41,7 @@ public class EmailService {
 
     @Async
     public void sendSeminarRegistrationSuccess(String to, String customerName, String vehicleModel, String seminarDate, int seats) {
-        sendEmailBestEffort(to, "Seminar Registration Confirmed",
+        sendEmailBestEffort(to, "SeminarRegistrationSuccess", "Seminar Registration Confirmed",
                 "Dear " + customerName + ",\n\n" +
                 "Your seminar registration has been confirmed with status: SUCCESS\n\n" +
                 "Details:\n" +
@@ -45,7 +53,7 @@ public class EmailService {
 
     @Async
     public void sendSeminarRegistrationWait(String to, String customerName, String vehicleModel, String seminarDate, int seats) {
-        sendEmailBestEffort(to, "Seminar Registration - Waitlisted",
+        sendEmailBestEffort(to, "SeminarRegistrationWait", "Seminar Registration - Waitlisted",
                 "Dear " + customerName + ",\n\n" +
                 "Your seminar registration has been placed on the waitlist.\n\n" +
                 "Details:\n" +
@@ -57,7 +65,7 @@ public class EmailService {
 
     @Async
     public void sendCancellationNotice(String to, String customerName, String vehicleModel, String seminarDate) {
-        sendEmailBestEffort(to, "Seminar Registration Cancelled",
+        sendEmailBestEffort(to, "SeminarRegistrationCancelled", "Seminar Registration Cancelled",
                 "Dear " + customerName + ",\n\n" +
                 "Your seminar registration has been cancelled.\n\n" +
                 "Details:\n" +
@@ -68,7 +76,7 @@ public class EmailService {
 
     @Async
     public void sendWaitlistPromotion(String to, String customerName, String vehicleModel, String seminarDate, int seats) {
-        sendEmailBestEffort(to, "Seminar Registration - You're In!",
+        sendEmailBestEffort(to, "SeminarWaitlistPromotion", "Seminar Registration - You're In!",
                 "Dear " + customerName + ",\n\n" +
                 "Great news! Your registration status has been upgraded from WAIT to SUCCESS.\n\n" +
                 "Details:\n" +
@@ -78,20 +86,46 @@ public class EmailService {
                 "We look forward to seeing you!");
     }
 
-    private void sendEmailOrThrow(String to, String subject, String text) {
+    private void sendEmailOrThrow(String to, String emailType, String subject, String text) {
+        if (!StringUtils.hasText(to)) {
+            throw new IllegalArgumentException("Email recipient must not be blank");
+        }
+
+        String recipient = to.trim().toLowerCase();
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
+        if (StringUtils.hasText(fromAddress)) {
+            message.setFrom(fromAddress);
+        }
+        message.setTo(recipient);
         message.setSubject(subject);
         message.setText(text);
-        mailSender.send(message);
-        log.info("Email sent to {} with subject: {}", to, subject);
+        try {
+            mailSender.send(message);
+            saveEmailLog(recipient, emailType, subject, text, "SUCCESS", null);
+            log.info("Email sent from {} to {} with subject: {}", fromAddress, recipient, subject);
+        } catch (Exception e) {
+            saveEmailLog(recipient, emailType, subject, text, "FAILED", e.getMessage());
+            throw e;
+        }
     }
 
-    private void sendEmailBestEffort(String to, String subject, String text) {
+    private void sendEmailBestEffort(String to, String emailType, String subject, String text) {
         try {
-            sendEmailOrThrow(to, subject, text);
+            sendEmailOrThrow(to, emailType, subject, text);
         } catch (Exception e) {
             log.error("Failed to send email to {}: {}", to, e.getMessage());
         }
+    }
+
+    private void saveEmailLog(String recipient, String emailType, String subject, String body, String status, String errorMessage) {
+        emailLogRepository.save(EmailLog.builder()
+                .recipient(recipient)
+                .emailType(emailType)
+                .subject(subject)
+                .body(body)
+                .status(status)
+                .errorMessage(errorMessage)
+                .sentAt("SUCCESS".equals(status) ? java.time.LocalDateTime.now() : null)
+                .build());
     }
 }

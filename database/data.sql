@@ -24,10 +24,17 @@ INSERT IGNORE INTO vehicle (id, model_number, description, picture_url, features
  'Dual Motor AWD 544hp, WE Edition SEA Platform, CTC Battery Integration, Mobileye SuperVision, Yamaha Audio System',
  269000.00);
 
+-- Refresh picture URLs for existing rows (so old example.com URLs are replaced)
+UPDATE vehicle SET picture_url = 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80' WHERE id = 1;
+UPDATE vehicle SET picture_url = 'https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&w=1200&q=80' WHERE id = 2;
+UPDATE vehicle SET picture_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/2022_XPeng_G9_%28front%29.jpg/1280px-2022_XPeng_G9_%28front%29.jpg', features = 'XNGP Advanced Driving, 800V SiC Platform, 5-minute 200km Fast Charge, Xopera 5D Music Cockpit' WHERE id = 3;
+UPDATE vehicle SET picture_url = 'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?auto=format&fit=crop&w=1200&q=80' WHERE id = 4;
+UPDATE vehicle SET picture_url = 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80' WHERE id = 5;
+
 -- Seminars (7 upcoming seminars)
 INSERT IGNORE INTO seminar (id, vehicle_id, seminar_date, max_seats) VALUES
 (1, 1, '2026-05-10 14:00:00', 30),
-(2, 2, '2026-05-15 10:00:00', 20),
+(2, 2, '2026-05-15 10:00:00', 2),
 (3, 3, '2026-05-20 14:00:00', 25),
 (4, 4, '2026-05-25 10:00:00', 15),
 (5, 5, '2026-06-01 14:00:00', 30),

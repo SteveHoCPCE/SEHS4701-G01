@@ -2,14 +2,19 @@
 backend/target/
 frontend/electric-vehicle-seminar-ui/dist/
 frontend/electric-vehicle-seminar-ui/build/
+coverage/
 
 # Dependencies
 node_modules/
+frontend/electric-vehicle-seminar-ui/node_modules/
 
 # Environment & secrets
 .env
 .env.*
 *.env
+.envrc
+!.env.example
+!**/.env.example
 application-local.yml
 application-prod.yml
 
@@ -28,7 +33,13 @@ Thumbs.db
 # Logs
 *.log
 logs/
+*.pid
+*.seed
 
 # JVM crash dumps
 hs_err_pid*
 replay_pid*
+
+# Runtime caches
+.cache/
+.vite/

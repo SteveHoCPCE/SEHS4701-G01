@@ -113,7 +113,7 @@ export default function VerificationPage() {
 
           <p className="helper-row">
             Didn’t receive a code? <Link to="/register">Register again</Link> to
-            resend the OTP. Codes expire after 5 minutes.
+            resend the OTP. Codes expire after 10 minutes.
           </p>
         </div>
       </div>
