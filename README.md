@@ -303,6 +303,27 @@ The backend sends OTP + notification emails via Gmail.
 
 ---
 
+## Docker Deployment
+
+You can easily spin up the entire application (MySQL, Spring Boot Backend, and React Frontend) using Docker Compose.
+
+1. Make sure you have **Docker** and **Docker Compose** installed.
+2. Set up your Gmail credentials for the backend in your shell or an `.env` file at the root of the project:
+   ```bash
+   export MAIL_USERNAME=your_google_email@gmail.com
+   export MAIL_PASSWORD=your_16_character_gmail_app_password
+   ```
+3. Build and run the containers:
+   ```bash
+   docker-compose up --build -d
+   ```
+4. Access the application:
+   * **Frontend:** http://localhost (Served on port 80 via Nginx)
+   * **Backend API:** http://localhost:8080
+   * **MySQL Database:** `localhost:3306` (Username: `root`, Password: `root`)
+
+---
+
 ## Environment Variables
 
 | Variable        | Required | Default | Purpose            |
