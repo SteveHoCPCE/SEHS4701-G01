@@ -1,0 +1,99 @@
+"Test Case ID","Test Case Scenario","Test Case","Pre-Conditions","Test Steps","Test Data","Expected Results","Post-Condition","Actual Results","Status"
+"UT-001","JwtUtil.generateToken()","Verify JWT token generation with valid email","JwtUtil bean initialized with secret key and expiration time","1. Call generateToken() with email ""test@example.com""
+2. Verify token is not null
+3. Verify token format (header.payload.signature)","email: ""test@example.com""","Token generated successfully with 3 parts separated by dots, contains email claim, expiration set to 24 hours from now","Token stored in memory for validation","",""
+"UT-002","JwtUtil.extractEmail()","Verify email extraction from valid JWT token","Valid JWT token generated","1. Generate token for ""user@test.com""
+2. Call extractEmail() with the token
+3. Assert extracted email matches original","token: valid JWT, expected email: ""user@test.com""","Email ""user@test.com"" extracted successfully from token","No state change","",""
+"UT-003","JwtUtil.isTokenExpired()","Verify token expiration check for valid token","Valid non-expired JWT token","1. Generate fresh token
+2. Call isTokenExpired() with the token
+3. Assert returns false","token: freshly generated JWT","Returns false indicating token is not expired","No state change","",""
+"UT-004","JwtUtil.validateToken()","Verify token validation with matching UserDetails","Valid token and matching UserDetails object","1. Generate token for ""test@example.com""
+2. Create UserDetails with same email
+3. Call validateToken(token, userDetails)
+4. Assert returns true","token: valid JWT, userDetails.username: ""test@example.com""","Returns true indicating token is valid for the user","No state change","",""
+"UT-005","JwtUtil.validateToken()","Verify token validation fails with mismatched email","Valid token but UserDetails with different email","1. Generate token for ""user1@test.com""
+2. Create UserDetails with ""user2@test.com""
+3. Call validateToken(token, userDetails)
+4. Assert returns false","token email: ""user1@test.com"", userDetails email: ""user2@test.com""","Returns false indicating token does not match user","No state change","",""
+"UT-006","AuthService.generateOtp()","Verify OTP generation produces 6-digit code","AuthService instance available","1. Call private method generateOtp() via reflection or public method
+2. Verify OTP length is 6
+3. Verify OTP contains only digits","None","6-digit numeric OTP generated (e.g., ""123456"")","No state change","",""
+"UT-007","PasswordEncoder.encode()","Verify BCrypt password encoding","PasswordEncoder bean initialized","1. Call encode() with password ""Test123!""
+2. Verify encoded string starts with ""$2a$"" or ""$2b$""
+3. Verify encoded length > 50 characters","password: ""Test123!""","BCrypt hash generated starting with ""$2a$"" or ""$2b$"", length > 50","No state change","",""
+"UT-008","PasswordEncoder.matches()","Verify password matching with correct password","Encoded password available","1. Encode password ""MyPass123""
+2. Call matches(""MyPass123"", encodedPassword)
+3. Assert returns true","rawPassword: ""MyPass123"", encodedPassword: BCrypt hash of ""MyPass123""","Returns true indicating password matches","No state change","",""
+"UT-009","PasswordEncoder.matches()","Verify password matching fails with wrong password","Encoded password available","1. Encode password ""MyPass123""
+2. Call matches(""WrongPass"", encodedPassword)
+3. Assert returns false","rawPassword: ""WrongPass"", encodedPassword: BCrypt hash of ""MyPass123""","Returns false indicating password does not match","No state change","",""
+"UT-010","RegistrationService.toResponse()","Verify Registration entity to DTO conversion","Registration entity with all fields populated","1. Create Registration with id=1, status=SUCCESS, seats=2, registeredAt=2026-01-15
+2. Call toResponse(registration)
+3. Verify all fields mapped correctly","Registration: id=1, status=SUCCESS, numberOfSeats=2, registeredAt=2026-01-15T10:00:00","RegistrationResponse with matching fields: id=1, status=""SUCCESS"", numberOfSeats=2, registeredAt=2026-01-15T10:00:00","No state change","",""
+"UT-011","RegistrationService.calculateAvailableSeats()","Verify available seats calculation with no registrations","Seminar with totalSeats=50, no registrations","1. Mock seminar.getTotalSeats() returns 50
+2. Mock registrationRepository.countByStatusAndSeminarId() returns 0
+3. Calculate available seats
+4. Assert result is 50","totalSeats: 50, successCount: 0","Available seats = 50","No state change","",""
+"UT-012","RegistrationService.calculateAvailableSeats()","Verify available seats calculation with partial bookings","Seminar with totalSeats=50, 30 seats booked","1. Mock seminar.getTotalSeats() returns 50
+2. Mock registrationRepository.sumSeats() returns 30
+3. Calculate available seats
+4. Assert result is 20","totalSeats: 50, bookedSeats: 30","Available seats = 20","No state change","",""
+"UT-013","RegistrationService.calculateAvailableSeats()","Verify available seats calculation when fully booked","Seminar with totalSeats=50, 50 seats booked","1. Mock seminar.getTotalSeats() returns 50
+2. Mock registrationRepository.sumSeats() returns 50
+3. Calculate available seats
+4. Assert result is 0","totalSeats: 50, bookedSeats: 50","Available seats = 0","No state change","",""
+"UT-014","GlobalExceptionHandler.handleResourceNotFound()","Verify ResourceNotFoundException handling","Exception thrown with message ""Seminar not found""","1. Create ResourceNotFoundException(""Seminar not found"")
+2. Call handleResourceNotFound(exception)
+3. Verify ResponseEntity status is 404
+4. Verify ApiErrorResponse contains correct message","exception message: ""Seminar not found""","ResponseEntity with status 404, body contains ApiErrorResponse with message ""Seminar not found"", timestamp populated","No state change","",""
+"UT-015","GlobalExceptionHandler.handleBadRequest()","Verify BadRequestException handling","Exception thrown with message ""Invalid seat count""","1. Create BadRequestException(""Invalid seat count"")
+2. Call handleBadRequest(exception)
+3. Verify ResponseEntity status is 400
+4. Verify ApiErrorResponse contains correct message","exception message: ""Invalid seat count""","ResponseEntity with status 400, body contains ApiErrorResponse with message ""Invalid seat count"", timestamp populated","No state change","",""
+"UT-016","GlobalExceptionHandler.handleUnauthorized()","Verify UnauthorizedException handling","Exception thrown with message ""Invalid credentials""","1. Create UnauthorizedException(""Invalid credentials"")
+2. Call handleUnauthorized(exception)
+3. Verify ResponseEntity status is 401
+4. Verify ApiErrorResponse contains correct message","exception message: ""Invalid credentials""","ResponseEntity with status 401, body contains ApiErrorResponse with message ""Invalid credentials"", timestamp populated","No state change","",""
+"UT-017","GlobalExceptionHandler.handleValidationErrors()","Verify MethodArgumentNotValidException handling","Validation exception with 2 field errors","1. Create MethodArgumentNotValidException with errors on ""email"" (""must be valid"") and ""password"" (""too short"")
+2. Call handleValidationErrors(exception)
+3. Verify ResponseEntity status is 400
+4. Verify ApiErrorResponse contains concatenated error messages","Field errors: email=""must be valid"", password=""too short""","ResponseEntity with status 400, body contains ApiErrorResponse with message ""email: must be valid; password: too short"", timestamp populated","No state change","",""
+"UT-018","CustomerRepository.findByEmail()","Verify customer lookup by existing email","Customer with email ""test@example.com"" exists in database","1. Save customer with email ""test@example.com""
+2. Call findByEmail(""test@example.com"")
+3. Verify Optional is present
+4. Verify customer email matches","email: ""test@example.com""","Optional<Customer> containing customer with email ""test@example.com""","No state change","",""
+"UT-019","CustomerRepository.findByEmail()","Verify customer lookup by non-existing email","No customer with email ""notfound@test.com"" in database","1. Call findByEmail(""notfound@test.com"")
+2. Verify Optional is empty","email: ""notfound@test.com""","Optional.empty() returned","No state change","",""
+"UT-020","CustomerRepository.existsByEmail()","Verify email existence check returns true","Customer with email ""exists@test.com"" in database","1. Save customer with email ""exists@test.com""
+2. Call existsByEmail(""exists@test.com"")
+3. Assert returns true","email: ""exists@test.com""","Returns true","No state change","",""
+"UT-021","CustomerRepository.existsByEmail()","Verify email existence check returns false","No customer with email ""new@test.com"" in database","1. Call existsByEmail(""new@test.com"")
+2. Assert returns false","email: ""new@test.com""","Returns false","No state change","",""
+"UT-022","RegistrationRepository.existsByCustomerIdAndSeminarIdAndStatusIn()","Verify duplicate registration check returns true","Customer has SUCCESS registration for seminar","1. Save registration with customerId=1, seminarId=5, status=SUCCESS
+2. Call existsByCustomerIdAndSeminarIdAndStatusIn(1, 5, [SUCCESS, WAIT])
+3. Assert returns true","customerId: 1, seminarId: 5, statuses: [SUCCESS, WAIT]","Returns true indicating duplicate exists","No state change","",""
+"UT-023","RegistrationRepository.existsByCustomerIdAndSeminarIdAndStatusIn()","Verify duplicate registration check returns false","Customer has no active registration for seminar","1. Call existsByCustomerIdAndSeminarIdAndStatusIn(1, 5, [SUCCESS, WAIT])
+2. Assert returns false","customerId: 1, seminarId: 5, statuses: [SUCCESS, WAIT]","Returns false indicating no duplicate","No state change","",""
+"UT-024","RegistrationRepository.findByCustomerIdAndStatusInAndSeminarDateAfter()","Verify history filtering by date and status","3 registrations: 2 within 1 year, 1 older than 1 year","1. Save registrations with dates: 2025-06-01, 2025-12-01, 2024-01-01
+2. Call findByCustomerIdAndStatusInAndSeminarDateAfter(customerId, [SUCCESS, WAIT, CANCEL], 2025-04-24)
+3. Verify returns 2 registrations","customerId: 1, cutoffDate: 2025-04-24, statuses: [SUCCESS, WAIT, CANCEL]","Returns 2 registrations (2025-06-01 and 2025-12-01), excludes 2024-01-01","No state change","",""
+"UT-025","RegistrationRepository.findWaitlistedByOrderAsc()","Verify waitlisted registrations ordered by registeredAt","3 WAIT registrations with different timestamps","1. Save 3 WAIT registrations for seminarId=5 with registeredAt: 10:00, 09:00, 11:00
+2. Call findWaitlistedByOrderAsc(5)
+3. Verify returns list ordered by registeredAt ascending","seminarId: 5, registrations: 10:00, 09:00, 11:00","Returns list ordered: [09:00, 10:00, 11:00]","No state change","",""
+"UT-026","SeminarRepository.findUpcomingSeminars()","Verify upcoming seminars query","5 seminars: 3 future, 2 past","1. Save seminars with dates: 2026-05-01, 2026-06-01, 2026-07-01, 2025-01-01, 2025-02-01
+2. Call findUpcomingSeminars(2026-04-24)
+3. Verify returns 3 seminars","currentDate: 2026-04-24","Returns 3 seminars with dates >= 2026-04-24, ordered by date ascending","No state change","",""
+"UT-027","EmailVerificationRepository.findByEmailAndOtp()","Verify OTP lookup with valid email and OTP","EmailVerification record exists with email and OTP","1. Save EmailVerification with email=""test@example.com"", otp=""123456""
+2. Call findByEmailAndOtp(""test@example.com"", ""123456"")
+3. Verify Optional is present","email: ""test@example.com"", otp: ""123456""","Optional<EmailVerification> containing matching record","No state change","",""
+"UT-028","EmailVerificationRepository.findByEmailAndOtp()","Verify OTP lookup fails with wrong OTP","EmailVerification exists but OTP doesn't match","1. Save EmailVerification with email=""test@example.com"", otp=""123456""
+2. Call findByEmailAndOtp(""test@example.com"", ""999999"")
+3. Verify Optional is empty","email: ""test@example.com"", otp: ""999999"" (actual: ""123456"")","Optional.empty() returned","No state change","",""
+"UT-029","VehicleRepository.findAll()","Verify retrieving all vehicles","3 vehicles in database","1. Save 3 vehicles with different makes/models
+2. Call findAll()
+3. Verify returns list of 3 vehicles","Vehicles: Tesla Model 3, BYD Atto 3, Nissan Leaf","Returns list containing all 3 vehicles","No state change","",""
+"UT-030","VehicleRepository.findById()","Verify vehicle lookup by existing ID","Vehicle with id=1 exists","1. Save vehicle with id=1, make=""Tesla"", model=""Model 3""
+2. Call findById(1)
+3. Verify Optional is present
+4. Verify vehicle details match","vehicleId: 1","Optional<Vehicle> containing vehicle with id=1, make=""Tesla"", model=""Model 3""","No state change","",""

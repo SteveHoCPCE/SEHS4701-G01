@@ -1,0 +1,194 @@
+"Test Case ID","Test Case Scenario","Test Case","Pre-Conditions","Test Steps","Test Data","Expected Results","Post-Condition","Actual Results","Status"
+"INT-001","AuthService and CustomerRepository Integration","Verify AuthService correctly interacts with CustomerRepository during registration","Database is accessible and empty","1. Call AuthService.register() with valid RegisterRequest
+2. Verify CustomerRepository.save() is called
+3. Query CustomerRepository.findByEmail()
+4. Verify customer record exists with correct data","RegisterRequest: {name=""Test User"", email=""test@example.com"", telephone=""+852 1234 5678"", password=""password123"", customerType=PERSONAL}","Customer saved to database
+Customer.emailVerified = false
+Customer.passwordHash is encrypted (not plain text)
+Customer record retrievable by email","Customer persisted in database","",""
+"INT-002","AuthService and EmailVerificationRepository Integration","Verify AuthService creates EmailVerification record during registration","Database is accessible","1. Call AuthService.register() with valid data
+2. Verify EmailVerificationRepository.save() is called
+3. Query EmailVerificationRepository by customer ID
+4. Verify OTP record exists with correct expiration","RegisterRequest with email=""test@example.com""","EmailVerification record created
+otpCode is 6-digit string
+expiresAt = current time + 10 minutes
+verified = false","OTP record persisted in database","",""
+"INT-003","AuthService and EmailService Integration","Verify AuthService triggers email sending during registration","Email service is configured and accessible","1. Call AuthService.register() with valid data
+2. Verify EmailService.sendVerificationEmailOrThrow() is called
+3. Check email log or mock email service
+4. Verify email contains OTP code","RegisterRequest with email=""test@example.com""","EmailService.sendVerificationEmailOrThrow() invoked with correct email and OTP
+Email sent successfully or logged
+Email content includes 6-digit OTP","Verification email sent to user","",""
+"INT-004","AuthService and JwtUtil Integration","Verify AuthService uses JwtUtil to generate tokens after verification","User registered and OTP exists","1. Call AuthService.verifyEmail() with valid OTP
+2. Verify JwtUtil.generateToken() is called with user email
+3. Verify returned AuthResponse contains valid JWT token
+4. Verify token can be validated by JwtUtil.validateToken()","VerifyEmailRequest: {email=""test@example.com"", otpCode=""123456""}","JwtUtil.generateToken() called with email
+AuthResponse.token is non-empty JWT string
+Token contains email in subject claim
+Token expiration is set to 24 hours from now","Valid JWT token generated and returned","",""
+"INT-005","AuthService and PasswordEncoder Integration","Verify AuthService uses PasswordEncoder to hash passwords","Database is accessible","1. Call AuthService.register() with plain text password
+2. Verify PasswordEncoder.encode() is called
+3. Query customer from database
+4. Verify passwordHash is not equal to plain text password
+5. Verify PasswordEncoder.matches() returns true for original password","RegisterRequest with password=""mypassword123""","PasswordEncoder.encode() invoked
+Customer.passwordHash != ""mypassword123""
+PasswordEncoder.matches(""mypassword123"", customer.passwordHash) = true","Password securely hashed in database","",""
+"INT-006","RegistrationService and SeminarRepository Integration","Verify RegistrationService retrieves seminar with pessimistic lock","Seminar exists in database","1. Call RegistrationService.register() for a seminar
+2. Verify SeminarRepository.findByIdWithLock() is called
+3. Verify pessimistic lock is applied (PESSIMISTIC_WRITE)
+4. Verify seminar data is retrieved correctly","Email=""test@example.com"", seminarId=1, seatsBooked=1","SeminarRepository.findByIdWithLock() invoked with seminarId
+Seminar entity returned with lock
+Concurrent access blocked during transaction","Seminar locked during registration process","",""
+"INT-007","RegistrationService and RegistrationRepository Integration","Verify RegistrationService creates registration record","User and seminar exist, seminar has available seats","1. Call RegistrationService.register()
+2. Verify RegistrationRepository.save() is called
+3. Query RegistrationRepository by customer and seminar
+4. Verify registration record exists with correct status","Email=""test@example.com"", seminarId=1, seatsBooked=2","RegistrationRepository.save() invoked
+Registration record created with status=SUCCESS
+seatsBooked=2
+createdAt and updatedAt timestamps set","Registration persisted in database","",""
+"INT-008","RegistrationService and EmailService Integration for Success","Verify RegistrationService sends success email after registration","User and seminar exist, registration succeeds","1. Call RegistrationService.register() resulting in SUCCESS status
+2. Verify EmailService.sendSeminarRegistrationSuccess() is called
+3. Verify email parameters include customer name, vehicle model, seminar date, seats","Email=""test@example.com"", seminarId=1, seatsBooked=1","EmailService.sendSeminarRegistrationSuccess() invoked
+Email sent to customer email
+Email contains seminar details and seat count","Success email sent to customer","",""
+"INT-009","RegistrationService and EmailService Integration for Waitlist","Verify RegistrationService sends waitlist email when seminar is full","User and seminar exist, seminar is full","1. Call RegistrationService.register() resulting in WAIT status
+2. Verify EmailService.sendSeminarRegistrationWait() is called
+3. Verify email parameters include waitlist status information","Email=""test@example.com"", seminarId=1, seatsBooked=1","EmailService.sendSeminarRegistrationWait() invoked
+Email sent to customer email
+Email indicates waitlist status","Waitlist email sent to customer","",""
+"INT-010","RegistrationService Waitlist Promotion Integration","Verify RegistrationService promotes waitlisted users and sends promotion emails","User A has SUCCESS registration, User B has WAIT registration","1. Call RegistrationService.cancel() for User A
+2. Verify RegistrationRepository updates User A status to CANCEL
+3. Verify RegistrationRepository updates User B status to SUCCESS
+4. Verify EmailService.sendWaitlistPromotion() is called for User B","User A email, User B email, same seminarId","User A registration status = CANCEL
+User B registration status = SUCCESS
+EmailService.sendWaitlistPromotion() invoked for User B
+Promotion email sent to User B","Waitlist user promoted and notified","",""
+"INT-011","RegistrationService and CustomerRepository Integration","Verify RegistrationService validates customer email verification status","Unverified customer exists in database","1. Call RegistrationService.register() with unverified customer email
+2. Verify CustomerRepository.findByEmail() is called
+3. Verify BadRequestException is thrown with message about email verification","Email=""unverified@example.com"" (emailVerified=false), seminarId=1, seatsBooked=1","CustomerRepository.findByEmail() invoked
+Customer.emailVerified checked
+BadRequestException thrown: ""Email must be verified before registering for a seminar""","Registration rejected for unverified user","",""
+"INT-012","RegistrationService Duplicate Check Integration","Verify RegistrationService checks for existing active registrations","Customer has existing SUCCESS registration for seminar","1. Call RegistrationService.register() for same seminar
+2. Verify RegistrationRepository.existsByCustomerIdAndSeminarIdAndStatusIn() is called
+3. Verify BadRequestException is thrown","Email=""test@example.com"", seminarId=1, seatsBooked=1","RegistrationRepository.existsByCustomerIdAndSeminarIdAndStatusIn() invoked with ACTIVE_STATUSES (SUCCESS, WAIT)
+Method returns true
+BadRequestException thrown: ""You already have an active registration for this seminar""","Duplicate registration prevented","",""
+"INT-013","RegistrationService Seat Calculation Integration","Verify RegistrationService calculates booked seats correctly","Seminar has multiple SUCCESS registrations","1. Call RegistrationService.register()
+2. Verify RegistrationRepository.sumBookedSeatsBySeminarIdAndStatus() is called
+3. Verify seat calculation determines correct status (SUCCESS or WAIT)","Seminar maxSeats=10, current SUCCESS bookings total 8 seats, new booking requests 2 seats","RegistrationRepository.sumBookedSeatsBySeminarIdAndStatus() invoked
+Returns 8 (current booked seats)
+New registration status = SUCCESS (8 + 2 = 10, exactly at capacity)","Seat calculation accurate, correct status assigned","",""
+"INT-014","SeminarService and SeminarRepository Integration","Verify SeminarService retrieves upcoming seminars correctly","Multiple seminars exist with past and future dates","1. Call SeminarService.getUpcomingSeminars()
+2. Verify SeminarRepository query filters by future dates
+3. Verify only future seminars are returned
+4. Verify seminar response includes vehicle details","No input parameters","SeminarRepository queries seminars where seminarDate > now
+Only future seminars returned
+Each SeminarResponse includes vehicleId, vehicleModelNumber, vehicleDescription
+availableSeats calculated correctly","Future seminars retrieved with vehicle info","",""
+"INT-015","VehicleService and VehicleRepository Integration","Verify VehicleService retrieves all vehicles","Multiple vehicles exist in database","1. Call VehicleService.getAllVehicles()
+2. Verify VehicleRepository.findAll() is called
+3. Verify all vehicle records are returned
+4. Verify VehicleResponse mapping is correct","No input parameters","VehicleRepository.findAll() invoked
+All vehicles returned as VehicleResponse objects
+Each response includes id, modelNumber, description, pictureUrl, features, unitPrice","All vehicles retrieved and mapped correctly","",""
+"INT-016","VehicleService and VehicleRepository Integration for Single Vehicle","Verify VehicleService retrieves vehicle by ID","Vehicle with ID=1 exists","1. Call VehicleService.getVehicleById(1)
+2. Verify VehicleRepository.findById() is called
+3. Verify vehicle is returned
+4. Verify ResourceNotFoundException thrown if not found","vehicleId=1","VehicleRepository.findById(1) invoked
+Vehicle entity returned
+VehicleResponse mapped correctly
+If not found, ResourceNotFoundException thrown","Vehicle retrieved by ID or exception thrown","",""
+"INT-017","CustomerService and CustomerRepository Integration","Verify CustomerService retrieves customer profile","Verified customer exists in database","1. Call CustomerService.getProfile(email)
+2. Verify CustomerRepository.findByEmail() is called
+3. Verify customer data is returned
+4. Verify CustomerProfileResponse mapping is correct","email=""test@example.com""","CustomerRepository.findByEmail() invoked
+Customer entity returned
+CustomerProfileResponse includes id, name, telephone, email, customerType, emailVerified, createdAt","Customer profile retrieved and mapped","",""
+"INT-018","JwtAuthenticationFilter and JwtUtil Integration","Verify JWT filter validates tokens using JwtUtil","Valid JWT token in Authorization header","1. Send request with Authorization: Bearer <token>
+2. Verify JwtAuthenticationFilter extracts token
+3. Verify JwtUtil.extractEmail() is called
+4. Verify JwtUtil.validateToken() is called
+5. Verify authentication set in SecurityContext","Authorization: Bearer <valid_jwt_token>","JwtUtil.extractEmail() invoked, returns email
+JwtUtil.validateToken() invoked, returns true
+SecurityContextHolder contains authentication
+Request proceeds to controller","Authentication successful via JWT","",""
+"INT-019","JwtAuthenticationFilter and CustomerDetailsService Integration","Verify JWT filter loads user details","Valid JWT token with email in subject","1. Send request with valid JWT token
+2. Verify JwtUtil.extractEmail() extracts email
+3. Verify CustomerDetailsService.loadUserByUsername() is called with email
+4. Verify UserDetails returned and authentication set","Authorization: Bearer <valid_jwt_token> containing email=""test@example.com""","JwtUtil.extractEmail() returns ""test@example.com""
+CustomerDetailsService.loadUserByUsername(""test@example.com"") invoked
+UserDetails returned with email as username
+Authentication object created with UserDetails","User details loaded for authentication","",""
+"INT-020","GlobalExceptionHandler and Controller Integration","Verify GlobalExceptionHandler catches ResourceNotFoundException from controllers","Vehicle with ID=999 does not exist","1. Send GET /api/vehicles/999
+2. VehicleService throws ResourceNotFoundException
+3. Verify GlobalExceptionHandler.handleNotFound() is called
+4. Verify ApiErrorResponse returned with status 404","GET /api/vehicles/999","ResourceNotFoundException thrown by VehicleService
+GlobalExceptionHandler catches exception
+ApiErrorResponse returned: {status: 404, message: ""Vehicle not found with id: 999"", errors: [...], timestamp: <time>}
+HTTP status 404","404 error response returned","",""
+"INT-021","GlobalExceptionHandler and Validation Integration","Verify GlobalExceptionHandler catches MethodArgumentNotValidException","Invalid registration request with missing fields","1. Send POST /api/auth/register with missing email
+2. Spring validation throws MethodArgumentNotValidException
+3. Verify GlobalExceptionHandler.handleValidation() is called
+4. Verify ApiErrorResponse with field errors returned","POST /api/auth/register with body missing email field","MethodArgumentNotValidException thrown
+GlobalExceptionHandler catches exception
+ApiErrorResponse returned: {status: 400, message: ""Validation failed"", errors: [""email: Email is required""], timestamp: <time>}
+HTTP status 400","Validation error response returned","",""
+"INT-022","RegistrationService Cancellation and Email Integration","Verify cancellation triggers cancellation email","User has active registration","1. Call RegistrationService.cancel()
+2. Verify registration status updated to CANCEL
+3. Verify EmailService.sendCancellationNotice() is called
+4. Verify email sent to customer","email=""test@example.com"", registrationId=1","Registration status = CANCEL
+EmailService.sendCancellationNotice() invoked with customer email, name, vehicle model, seminar date
+Cancellation email sent","Cancellation email sent to customer","",""
+"INT-023","RegistrationService Past Seminar Check Integration","Verify RegistrationService prevents registration for past seminars","Past seminar exists in database","1. Call RegistrationService.register() for past seminar
+2. Verify Seminar.seminarDate is checked against current time
+3. Verify BadRequestException thrown","email=""test@example.com"", seminarId=<past_seminar_id>, seatsBooked=1","Seminar.seminarDate.isBefore(LocalDateTime.now()) = true
+BadRequestException thrown: ""Cannot register for a past seminar""","Registration rejected for past seminar","",""
+"INT-024","RegistrationService Past Cancellation Check Integration","Verify RegistrationService prevents cancellation after seminar starts","Registration for past seminar exists","1. Call RegistrationService.cancel() for past seminar registration
+2. Verify Seminar.seminarDate is checked against current time
+3. Verify BadRequestException thrown","email=""test@example.com"", registrationId=<past_registration_id>","Registration.seminar.seminarDate.isBefore(LocalDateTime.now()) = true
+BadRequestException thrown: ""Cannot cancel a registration after the seminar has started""","Cancellation rejected for past seminar","",""
+"INT-025","RegistrationService FIFO Waitlist Promotion Integration","Verify waitlist promotion follows FIFO order","Multiple WAIT registrations exist for same seminar","1. Create 3 WAIT registrations at different times
+2. Call RegistrationService.cancel() for SUCCESS registration
+3. Verify RegistrationRepository.findBySeminarIdAndStatusOrderByCreatedAtAsc() is called
+4. Verify earliest WAIT registration is promoted first","User A: WAIT created at T1
+User B: WAIT created at T2
+User C: WAIT created at T3
+User D: SUCCESS (to be cancelled)","RegistrationRepository query returns WAIT registrations ordered by createdAt ASC
+User A (earliest) promoted to SUCCESS first
+If seats remain, User B promoted next
+Promotion emails sent in FIFO order","Waitlist promoted in FIFO order","",""
+"INT-026","AuthService Re-registration Integration","Verify AuthService allows re-registration for unverified users","User registered but not verified","1. Call AuthService.register() with same email but different data
+2. Verify CustomerRepository.findByEmail() returns existing customer
+3. Verify customer record is updated (not duplicated)
+4. Verify new OTP is generated","First: {email=""test@example.com"", name=""Old Name"", password=""old123""}
+Second: {email=""test@example.com"", name=""New Name"", password=""new123""}","CustomerRepository.findByEmail() returns existing customer with emailVerified=false
+Customer.name updated to ""New Name""
+Customer.passwordHash updated with new password hash
+New EmailVerification record created with new OTP","Customer record updated, new OTP generated","",""
+"INT-027","RegistrationService History Filtering Integration","Verify RegistrationService filters history by 1-year window","Customer has registrations from 2 years ago and recent","1. Call RegistrationService.getHistory()
+2. Verify RegistrationRepository query includes date filter
+3. Verify only registrations within 1 year returned","email=""test@example.com""
+Registrations exist with seminarDate: 2 years ago, 6 months ago, 1 month ago","RegistrationRepository.findByCustomerIdAndSeminarSeminarDateAfterOrderBySeminarSeminarDateDesc() invoked
+oneYearAgo = LocalDateTime.now().minusYears(1)
+Only registrations with seminarDate > oneYearAgo returned","History filtered to 1-year window","",""
+"INT-028","SecurityConfig and JwtAuthenticationFilter Integration","Verify SecurityConfig applies JWT filter to protected endpoints","JWT filter configured in SecurityConfig","1. Send GET /api/users/profile without token
+2. Verify JwtAuthenticationFilter is invoked
+3. Verify JwtAuthenticationEntryPoint handles missing token
+4. Verify 401 response returned","GET /api/users/profile without Authorization header","JwtAuthenticationFilter processes request
+No token found, authentication fails
+JwtAuthenticationEntryPoint.commence() invoked
+HTTP 401 response returned","Unauthorized access rejected","",""
+"INT-029","SecurityConfig Public Endpoint Integration","Verify SecurityConfig allows public access to vehicle and seminar endpoints","SecurityConfig permits GET /api/vehicles and /api/seminars without auth","1. Send GET /api/vehicles without token
+2. Send GET /api/seminars/upcoming without token
+3. Verify both requests succeed without authentication","GET /api/vehicles
+GET /api/seminars/upcoming
+No Authorization header","Both requests bypass JWT authentication
+VehicleController and SeminarController invoked
+HTTP 200 responses returned with data","Public endpoints accessible without auth","",""
+"INT-030","RegistrationService Seat Boundary Integration","Verify RegistrationService handles exact capacity correctly","Seminar has maxSeats=10, bookedSeats=8","1. Call RegistrationService.register() with seatsBooked=2
+2. Verify seat calculation: 8 + 2 = 10 (exactly at capacity)
+3. Verify registration status = SUCCESS
+4. Call RegistrationService.register() again with seatsBooked=1
+5. Verify second registration status = WAIT","First: seatsBooked=2
+Second: seatsBooked=1","First registration: currentBookedSeats=8, 8+2=10 <= 10, status=SUCCESS
+Second registration: currentBookedSeats=10, 10+1=11 > 10, status=WAIT","Boundary condition handled correctly","",""

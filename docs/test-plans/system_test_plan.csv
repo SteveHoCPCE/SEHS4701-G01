@@ -1,0 +1,164 @@
+"Test Case ID","Test Case Scenario","Test Case","Pre-Conditions","Test Steps","Test Data","Expected Results","Post-Condition","Actual Results","Status"
+"SYS-001","Full Registration and Login Flow","Verify complete user registration, email verification, and login workflow","System is running, email service is configured","1. POST /api/auth/register with valid data
+2. Retrieve OTP from database or email
+3. POST /api/auth/verify-email with OTP
+4. POST /api/auth/login with credentials
+5. Verify JWT token from login matches expected structure","Register: {""name"": ""Alice Wong"", ""telephone"": ""+852 9111 2222"", ""email"": ""alice@test.com"", ""password"": ""secure123"", ""customerType"": ""PERSONAL""}
+Verify: {""email"": ""alice@test.com"", ""otpCode"": ""<otp_from_db>""}
+Login: {""email"": ""alice@test.com"", ""password"": ""secure123""}","Step 1: HTTP 200, message contains ""Registration successful""
+Step 3: HTTP 200, token returned, verified=true
+Step 4: HTTP 200, token returned, verified=true
+JWT token is a valid Bearer token","User fully registered, verified, and authenticated","",""
+"SYS-002","Full Seminar Registration Workflow","Verify complete workflow from browsing seminars to registering","User registered and verified, seminars exist in database","1. GET /api/seminars/upcoming (no auth)
+2. POST /api/auth/login to get token
+3. POST /api/seminars/{seminarId}/register with token
+4. GET /api/registrations/history to confirm registration
+5. GET /api/registrations/{id} to view details","Login: {""email"": ""alice@test.com"", ""password"": ""secure123""}
+Register: {""seatsBooked"": 2}","Step 1: HTTP 200, list of upcoming seminars returned
+Step 2: HTTP 200, JWT token returned
+Step 3: HTTP 200, status=SUCCESS, seatsBooked=2
+Step 4: HTTP 200, registration appears in history
+Step 5: HTTP 200, registration details match","Registration confirmed in database with SUCCESS status","",""
+"SYS-003","Seminar Registration and Cancellation Workflow","Verify user can register then cancel a seminar registration","User logged in, future seminar with available seats exists","1. POST /api/seminars/{seminarId}/register with 1 seat
+2. Verify registration status is SUCCESS
+3. PUT /api/registrations/{id}/cancel
+4. Verify registration status is CANCEL
+5. GET /api/seminars/upcoming to verify seat count increased","Authorization: Bearer <token>
+Register: {""seatsBooked"": 1}","Step 1: HTTP 200, status=SUCCESS
+Step 3: HTTP 200, status=CANCEL
+Step 5: availableSeats for the seminar increased by 1 compared to before cancellation","Registration cancelled, seat returned to seminar pool","",""
+"SYS-004","Waitlist Promotion on Cancellation","Verify waitlisted user is automatically promoted when a SUCCESS registration is cancelled","User A has SUCCESS registration, User B has WAIT registration for same seminar (seminar is full)","1. Confirm User B has WAIT status registration
+2. User A: PUT /api/registrations/{id}/cancel
+3. GET /api/registrations/{waitId} as User B
+4. Verify User B status changed to SUCCESS","User A token, User B token
+User A registration ID, User B registration ID","Step 2: HTTP 200, User A status=CANCEL
+Step 3: HTTP 200, User B status=SUCCESS
+User B receives promotion email notification","User B promoted from WAIT to SUCCESS automatically","",""
+"SYS-005","Company Customer Registration and Profile","Verify COMPANY type customer can register and view profile","System is running","1. POST /api/auth/register with customerType=COMPANY
+2. Verify email with OTP
+3. POST /api/auth/login
+4. GET /api/users/profile
+5. Verify customerType field in profile response","Register: {""name"": ""ABC Corp"", ""telephone"": ""+852 2222 3333"", ""email"": ""corp@test.com"", ""password"": ""corp1234"", ""customerType"": ""COMPANY""}","Step 1: HTTP 200, registration successful
+Step 2: HTTP 200, verified=true
+Step 3: HTTP 200, token returned
+Step 4: HTTP 200, customerType=COMPANY in response","Company customer profile accessible with correct type","",""
+"SYS-006","Multiple Seminars Registration","Verify user can register for multiple different seminars","User logged in, at least 2 different future seminars exist","1. POST /api/seminars/{seminarId1}/register with 1 seat
+2. POST /api/seminars/{seminarId2}/register with 1 seat
+3. GET /api/registrations/history
+4. Verify both registrations appear in history","Authorization: Bearer <token>
+Register Seminar 1: {""seatsBooked"": 1}
+Register Seminar 2: {""seatsBooked"": 1}","Step 1: HTTP 200, status=SUCCESS for seminar 1
+Step 2: HTTP 200, status=SUCCESS for seminar 2
+Step 3: HTTP 200, history contains both registrations with correct seminarId values","Two separate registrations created in database","",""
+"SYS-007","Duplicate Seminar Registration Prevention","Verify system prevents registering for same seminar twice","User logged in, already has active registration for seminar","1. POST /api/seminars/{seminarId}/register (first registration)
+2. POST /api/seminars/{seminarId}/register again (duplicate attempt)
+3. Verify error response","Authorization: Bearer <token>
+Register: {""seatsBooked"": 1}","Step 1: HTTP 200, status=SUCCESS
+Step 2: HTTP 400, message=""You already have an active registration for this seminar""
+errors array contains the same message","Only one registration exists for the seminar","",""
+"SYS-008","Registration History Filtering","Verify registration history only returns records within 1 year","User has registrations older than 1 year and within 1 year","1. POST /api/auth/login
+2. GET /api/registrations/history
+3. Verify all returned registrations have seminarDate within past 1 year
+4. Verify registrations older than 1 year are not returned","Authorization: Bearer <token>","Step 2: HTTP 200
+All seminarDate values in response are after (now - 1 year)
+No registrations with seminarDate older than 1 year appear in results","History filtered correctly by 1-year window","",""
+"SYS-009","Registration History Ordering","Verify registration history is ordered by seminar date descending","User has multiple registrations with different seminar dates","1. POST /api/auth/login
+2. GET /api/registrations/history
+3. Verify seminarDate values are in descending order","Authorization: Bearer <token>","Step 2: HTTP 200
+seminarDate of first item >= seminarDate of second item >= seminarDate of subsequent items","Results returned in correct descending order","",""
+"SYS-010","Cannot Register for Past Seminar","Verify system prevents registration for seminars that have already occurred","User logged in, past seminar exists in database","1. POST /api/seminars/{pastSeminarId}/register
+2. Verify error response","Authorization: Bearer <token>
+Path: seminarId=<past_seminar_id>
+Body: {""seatsBooked"": 1}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Cannot register for a past seminar"", ""errors"": [""Cannot register for a past seminar""], ""timestamp"": ""<timestamp>""}","Registration rejected for past seminar","",""
+"SYS-011","Cannot Cancel Past Seminar Registration","Verify system prevents cancellation after seminar has started","User has registration for a seminar that has already started","1. PUT /api/registrations/{id}/cancel for past seminar registration
+2. Verify error response","Authorization: Bearer <token>
+Path: id=<registration_for_past_seminar>","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Cannot cancel a registration after the seminar has started"", ""errors"": [""Cannot cancel a registration after the seminar has started""], ""timestamp"": ""<timestamp>""}","Cancellation rejected for past seminar","",""
+"SYS-012","Unverified User Cannot Register for Seminar","Verify unverified users cannot register for seminars","User registered but email not verified, JWT token obtained via workaround","1. Attempt POST /api/seminars/{seminarId}/register with token of unverified user
+2. Verify error response","Authorization: Bearer <unverified_user_token>
+Body: {""seatsBooked"": 1}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Email must be verified before registering for a seminar"", ""errors"": [""Email must be verified before registering for a seminar""], ""timestamp"": ""<timestamp>""}","Registration rejected for unverified user","",""
+"SYS-013","User Cannot Access Another User's Registration","Verify user cannot view or cancel another user's registration","Two users exist: User A and User B, User A has a registration","1. User B: POST /api/auth/login to get token
+2. User B: GET /api/registrations/{userA_registration_id}
+3. Verify 404 error (registration not found for this user)","User B Authorization: Bearer <user_b_token>
+Path: id=<user_a_registration_id>","Step 2: HTTP 404
+Response contains: {""status"": 404, ""message"": ""Registration not found"", ""errors"": [""Registration not found""], ""timestamp"": ""<timestamp>""}","Access denied, User B cannot see User A's registration","",""
+"SYS-014","User Cannot Cancel Another User's Registration","Verify user cannot cancel another user's registration","Two users exist: User A and User B, User A has an active registration","1. User B: POST /api/auth/login to get token
+2. User B: PUT /api/registrations/{userA_registration_id}/cancel
+3. Verify 404 error","User B Authorization: Bearer <user_b_token>
+Path: id=<user_a_registration_id>","Step 2: HTTP 404
+Response contains: {""status"": 404, ""message"": ""Registration not found"", ""errors"": [""Registration not found""], ""timestamp"": ""<timestamp>""}","Cancellation rejected, User B cannot cancel User A's registration","",""
+"SYS-015","Re-registration with New OTP for Unverified Account","Verify user can re-register with updated details if previous registration was not verified","User registered but not verified","1. POST /api/auth/register with same email but different name/password
+2. Verify new OTP is generated
+3. POST /api/auth/verify-email with new OTP
+4. POST /api/auth/login with new password","First Register: {""name"": ""Old Name"", ""email"": ""retest@test.com"", ""password"": ""oldpass1"", ""telephone"": ""+852 1111 2222"", ""customerType"": ""PERSONAL""}
+Second Register: {""name"": ""New Name"", ""email"": ""retest@test.com"", ""password"": ""newpass1"", ""telephone"": ""+852 1111 2222"", ""customerType"": ""PERSONAL""}
+Verify: {""email"": ""retest@test.com"", ""otpCode"": ""<new_otp>""}
+Login: {""email"": ""retest@test.com"", ""password"": ""newpass1""}","Step 1 (second): HTTP 200, registration successful
+Step 3: HTTP 200, verified=true, name=""New Name""
+Step 4: HTTP 200, login successful with new password","Account updated with new details and verified","",""
+"SYS-016","Seminar Seat Count Accuracy","Verify available seats count is accurate after registrations","Seminar with maxSeats=10 and 0 bookedSeats exists","1. GET /api/seminars/upcoming to record initial availableSeats
+2. POST /api/seminars/{seminarId}/register with 2 seats
+3. GET /api/seminars/upcoming again
+4. Verify availableSeats decreased by 2","Authorization: Bearer <token>
+Body: {""seatsBooked"": 2}","Step 1: availableSeats = N (initial value)
+Step 3: availableSeats = N - 2
+bookedSeats increased by 2","Seat count accurately reflects the booking","",""
+"SYS-017","Seat Count Restored After Cancellation","Verify available seats are restored after cancellation","User has SUCCESS registration for a seminar","1. GET /api/seminars/upcoming to record current availableSeats
+2. PUT /api/registrations/{id}/cancel
+3. GET /api/seminars/upcoming again
+4. Verify availableSeats increased by seatsBooked amount","Authorization: Bearer <token>
+Path: id=<registration_id>","Step 2: HTTP 200, status=CANCEL
+Step 3: availableSeats = previous_availableSeats + seatsBooked
+bookedSeats decreased accordingly","Seat count accurately restored after cancellation","",""
+"SYS-018","Seminar Booking at Capacity Boundary","Verify system correctly handles booking at exact capacity","Seminar with 1 available seat remaining","1. POST /api/seminars/{seminarId}/register with seatsBooked=1 (fills seminar)
+2. POST /api/seminars/{seminarId}/register with seatsBooked=1 (second user, should waitlist)","User 1 Authorization: Bearer <token1>
+User 2 Authorization: Bearer <token2>
+Both bodies: {""seatsBooked"": 1}","Step 1: HTTP 200, status=SUCCESS
+Step 2: HTTP 200, status=WAIT (seminar now full)","Seminar at capacity, subsequent registrations go to waitlist","",""
+"SYS-019","Vehicle Catalog Accessible Without Authentication","Verify vehicle catalog is publicly accessible","System is running with vehicles in database","1. GET /api/vehicles without any Authorization header
+2. GET /api/vehicles/1 without any Authorization header
+3. Verify both return data successfully","No Authorization header","Step 1: HTTP 200, array of vehicles returned
+Step 2: HTTP 200, vehicle details returned
+No 401 error for either request","Vehicle data accessible publicly","",""
+"SYS-020","Seminar List Accessible Without Authentication","Verify upcoming seminars are publicly accessible","System is running with future seminars in database","1. GET /api/seminars/upcoming without any Authorization header
+2. Verify seminars returned successfully","No Authorization header","HTTP 200
+Array of upcoming seminars returned
+No 401 error","Seminar list accessible publicly","",""
+"SYS-021","Invalid OTP Code Rejection","Verify system rejects incorrect OTP code","User registered, valid OTP exists in database","1. POST /api/auth/verify-email with wrong OTP code
+2. Verify error response
+3. POST /api/auth/verify-email with correct OTP
+4. Verify success","Wrong OTP: {""email"": ""alice@test.com"", ""otpCode"": ""000000""}
+Correct OTP: {""email"": ""alice@test.com"", ""otpCode"": ""<correct_otp>""}","Step 1: HTTP 400, message=""Invalid verification code""
+Step 3: HTTP 200, verified=true, token returned","Account verified after correct OTP provided","",""
+"SYS-022","Seminar Registration with Minimum Seats","Verify user can register with minimum 1 seat","User logged in, seminar with available seats exists","1. POST /api/seminars/{seminarId}/register with seatsBooked=1
+2. Verify registration created with 1 seat","Authorization: Bearer <token>
+Body: {""seatsBooked"": 1}","HTTP 200
+Response contains: seatsBooked=1, status=SUCCESS","Registration created with 1 seat","",""
+"SYS-023","Seminar Registration with Maximum Seats","Verify user can register with maximum 2 seats","User logged in, seminar with at least 2 available seats exists","1. POST /api/seminars/{seminarId}/register with seatsBooked=2
+2. Verify registration created with 2 seats","Authorization: Bearer <token>
+Body: {""seatsBooked"": 2}","HTTP 200
+Response contains: seatsBooked=2, status=SUCCESS","Registration created with 2 seats","",""
+"SYS-024","Profile Reflects Correct Customer Data","Verify profile endpoint returns accurate data matching registration","User registered with specific data and verified","1. POST /api/auth/login
+2. GET /api/users/profile
+3. Verify all fields match registration data","Login: {""email"": ""alice@test.com"", ""password"": ""secure123""}
+Authorization: Bearer <token>","HTTP 200
+name=""Alice Wong"", telephone=""+852 9111 2222"", email=""alice@test.com"", customerType=""PERSONAL"", emailVerified=true
+createdAt is a valid ISO datetime","Profile data matches registration input","",""
+"SYS-025","Seminar Registration Validation - Zero Seats","Verify system rejects seatsBooked=0","User logged in, seminar exists","1. POST /api/seminars/{seminarId}/register with seatsBooked=0
+2. Verify validation error","Authorization: Bearer <token>
+Body: {""seatsBooked"": 0}","HTTP 400
+Response contains: {""status"": 400, ""message"": ""Validation failed"", ""errors"": [""seatsBooked: Must book at least 1 seat""], ""timestamp"": ""<timestamp>""}","Registration rejected for 0 seats","",""
+"SYS-026","Seminar Registration Validation - Negative Seats","Verify system rejects negative seatsBooked value","User logged in, seminar exists","1. POST /api/seminars/{seminarId}/register with seatsBooked=-1
+2. Verify validation error","Authorization: Bearer <token>
+Body: {""seatsBooked"": -1}","HTTP 400
+Response contains: {""status"": 400, ""message"": ""Validation failed"", ""errors"": [""seatsBooked: Must book at least 1 seat""], ""timestamp"": ""<timestamp>""}","Registration rejected for negative seats","",""
+"SYS-027","Cancelled Registration Excluded from Active Check","Verify user can re-register for same seminar after cancellation","User has CANCEL status registration for a seminar","1. POST /api/seminars/{seminarId}/register (after previous cancellation)
+2. Verify new registration is created successfully","Authorization: Bearer <token>
+Body: {""seatsBooked"": 1}","HTTP 200
+New registration created with status=SUCCESS or WAIT
+Previous CANCEL registration still exists in history","New registration created, CANCEL status does not block re-registration","",""
+"SYS-028","Email Normalization on Login","Verify email is case-insensitive during login","User registered with lowercase email","1. POST /api/auth/login with uppercase email
+2. Verify login succeeds","Login: {""email"": ""ALICE@TEST.COM"", ""password"": ""secure123""}","HTTP 200
+token returned, email in response is lowercase ""alice@test.com""","Login successful with case-insensitive email","",""

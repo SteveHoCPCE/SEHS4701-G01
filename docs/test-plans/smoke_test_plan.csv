@@ -1,0 +1,117 @@
+"Test Case ID","Test Case Scenario","Test Case","Pre-Conditions","Test Steps","Test Data","Expected Results","Post-Condition","Actual Results","Status"
+"SMK-001","User Registration","Verify user can successfully register with valid data","System is running and accessible","1. Send POST request to /api/auth/register with valid user data
+2. Verify response status code
+3. Check response message","Request Body: {""name"": ""John Doe"", ""telephone"": ""+852 9123 4567"", ""email"": ""john.doe@test.com"", ""password"": ""password123"", ""customerType"": ""PERSONAL""}","HTTP Status: 200
+Response contains: {""message"": ""Registration successful. Please check your email for verification code.""}
+OTP code generated and stored in database","User account created in database with emailVerified=false","",""
+"SMK-002","Email Verification","Verify user can verify email with valid OTP","User registered but not verified, OTP code available","1. Send POST request to /api/auth/verify-email with email and OTP
+2. Verify response status code
+3. Check JWT token is returned","Request Body: {""email"": ""john.doe@test.com"", ""otpCode"": ""123456""}","HTTP Status: 200
+Response contains: {""token"": ""<JWT>"", ""email"": ""john.doe@test.com"", ""name"": ""John Doe"", ""verified"": true}
+JWT token is valid and not empty","User emailVerified flag set to true in database","",""
+"SMK-003","User Login","Verify verified user can login successfully","User registered and email verified","1. Send POST request to /api/auth/login with valid credentials
+2. Verify response status code
+3. Check JWT token is returned","Request Body: {""email"": ""john.doe@test.com"", ""password"": ""password123""}","HTTP Status: 200
+Response contains: {""token"": ""<JWT>"", ""email"": ""john.doe@test.com"", ""name"": ""John Doe"", ""verified"": true}
+JWT token is valid","User successfully authenticated","",""
+"SMK-004","Get User Profile","Verify authenticated user can retrieve their profile","User logged in with valid JWT token","1. Send GET request to /api/users/profile with Authorization header
+2. Verify response status code
+3. Check profile data is returned","Authorization Header: Bearer <valid_jwt_token>","HTTP Status: 200
+Response contains: {""id"": 1, ""name"": ""John Doe"", ""telephone"": ""+852 9123 4567"", ""email"": ""john.doe@test.com"", ""customerType"": ""PERSONAL"", ""emailVerified"": true, ""createdAt"": ""<timestamp>""}","Profile data retrieved successfully","",""
+"SMK-005","Get All Vehicles","Verify system returns list of all vehicles","System has vehicles in database","1. Send GET request to /api/vehicles
+2. Verify response status code
+3. Check vehicles array is returned","No request body required","HTTP Status: 200
+Response is an array containing vehicle objects with fields: id, modelNumber, description, pictureUrl, features, unitPrice","Vehicle list retrieved successfully","",""
+"SMK-006","Get Vehicle by ID","Verify system returns specific vehicle details","Vehicle with ID=1 exists in database","1. Send GET request to /api/vehicles/1
+2. Verify response status code
+3. Check vehicle details are returned","Path Parameter: id=1","HTTP Status: 200
+Response contains: {""id"": 1, ""modelNumber"": ""<model>"", ""description"": ""<desc>"", ""pictureUrl"": ""<url>"", ""features"": ""<features>"", ""unitPrice"": <price>}","Vehicle details retrieved successfully","",""
+"SMK-007","Get Upcoming Seminars","Verify system returns list of upcoming seminars","System has future seminars in database","1. Send GET request to /api/seminars/upcoming
+2. Verify response status code
+3. Check seminars array is returned with availability info","No request body required","HTTP Status: 200
+Response is an array containing seminar objects with fields: id, vehicleId, vehicleModelNumber, vehicleDescription, seminarDate, maxSeats, bookedSeats, availableSeats","Seminar list retrieved successfully","",""
+"SMK-008","Register for Seminar","Verify authenticated user can register for a seminar","User logged in, seminar with available seats exists","1. Send POST request to /api/seminars/{seminarId}/register with Authorization header
+2. Include seatsBooked in request body
+3. Verify response status code
+4. Check registration status","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: seminarId=1
+Request Body: {""seatsBooked"": 2}","HTTP Status: 200
+Response contains: {""id"": <reg_id>, ""seminarId"": 1, ""vehicleModelNumber"": ""<model>"", ""seminarDate"": ""<date>"", ""seatsBooked"": 2, ""status"": ""SUCCESS"", ""createdAt"": ""<timestamp>"", ""updatedAt"": ""<timestamp>""}","Registration created with SUCCESS status, seats deducted from available","",""
+"SMK-009","Get Registration History","Verify authenticated user can view their registration history","User logged in and has at least one registration","1. Send GET request to /api/registrations/history with Authorization header
+2. Verify response status code
+3. Check registrations array is returned","Authorization Header: Bearer <valid_jwt_token>","HTTP Status: 200
+Response is an array containing registration objects with fields: id, seminarId, vehicleModelNumber, seminarDate, seatsBooked, status, createdAt, updatedAt","Registration history retrieved successfully","",""
+"SMK-010","Get Registration by ID","Verify authenticated user can view specific registration details","User logged in and owns registration with ID","1. Send GET request to /api/registrations/{id} with Authorization header
+2. Verify response status code
+3. Check registration details are returned","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: id=<registration_id>","HTTP Status: 200
+Response contains: {""id"": <reg_id>, ""seminarId"": <sem_id>, ""vehicleModelNumber"": ""<model>"", ""seminarDate"": ""<date>"", ""seatsBooked"": <seats>, ""status"": ""<status>"", ""createdAt"": ""<timestamp>"", ""updatedAt"": ""<timestamp>""}","Registration details retrieved successfully","",""
+"SMK-011","Cancel Registration","Verify authenticated user can cancel their registration","User logged in and has active registration for future seminar","1. Send PUT request to /api/registrations/{id}/cancel with Authorization header
+2. Verify response status code
+3. Check registration status changed to CANCEL","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: id=<registration_id>","HTTP Status: 200
+Response contains: {""id"": <reg_id>, ""seminarId"": <sem_id>, ""vehicleModelNumber"": ""<model>"", ""seminarDate"": ""<date>"", ""seatsBooked"": <seats>, ""status"": ""CANCEL"", ""createdAt"": ""<timestamp>"", ""updatedAt"": ""<timestamp>""}
+updatedAt timestamp is updated","Registration status changed to CANCEL, seats released back to seminar","",""
+"SMK-012","Invalid Login Credentials","Verify system rejects login with wrong password","User registered and verified","1. Send POST request to /api/auth/login with incorrect password
+2. Verify response status code
+3. Check error message","Request Body: {""email"": ""john.doe@test.com"", ""password"": ""wrongpassword""}","HTTP Status: 401
+Response contains: {""status"": 401, ""message"": ""Invalid email or password"", ""errors"": [""Invalid email or password""], ""timestamp"": ""<timestamp>""}","Login rejected, no token issued","",""
+"SMK-013","Unauthorized Access to Profile","Verify system rejects profile access without token","No authentication token provided","1. Send GET request to /api/users/profile without Authorization header
+2. Verify response status code
+3. Check error message","No Authorization header","HTTP Status: 401
+Response contains: {""status"": 401, ""message"": ""Unauthorized access"", ""errors"": [""Unauthorized access""], ""timestamp"": ""<timestamp>""}","Access denied","",""
+"SMK-014","Registration Validation - Missing Fields","Verify system validates required fields during registration","System is running","1. Send POST request to /api/auth/register with missing email field
+2. Verify response status code
+3. Check validation error message","Request Body: {""name"": ""John Doe"", ""telephone"": ""+852 9123 4567"", ""password"": ""password123"", ""customerType"": ""PERSONAL""}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Validation failed"", ""errors"": [""email: Email is required""], ""timestamp"": ""<timestamp>""}","Registration rejected due to validation error","",""
+"SMK-015","Registration Validation - Invalid Email Format","Verify system validates email format","System is running","1. Send POST request to /api/auth/register with invalid email format
+2. Verify response status code
+3. Check validation error message","Request Body: {""name"": ""John Doe"", ""telephone"": ""+852 9123 4567"", ""email"": ""invalid-email"", ""password"": ""password123"", ""customerType"": ""PERSONAL""}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Validation failed"", ""errors"": [""email: Invalid email format""], ""timestamp"": ""<timestamp>""}","Registration rejected due to invalid email format","",""
+"SMK-016","Registration Validation - Short Password","Verify system validates password length","System is running","1. Send POST request to /api/auth/register with password less than 6 characters
+2. Verify response status code
+3. Check validation error message","Request Body: {""name"": ""John Doe"", ""telephone"": ""+852 9123 4567"", ""email"": ""john@test.com"", ""password"": ""12345"", ""customerType"": ""PERSONAL""}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Validation failed"", ""errors"": [""password: Password must be at least 6 characters""], ""timestamp"": ""<timestamp>""}","Registration rejected due to short password","",""
+"SMK-017","Seminar Registration Validation - Invalid Seats","Verify system validates seats booked range","User logged in, seminar exists","1. Send POST request to /api/seminars/{seminarId}/register with seatsBooked=3
+2. Verify response status code
+3. Check validation error message","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: seminarId=1
+Request Body: {""seatsBooked"": 3}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Validation failed"", ""errors"": [""seatsBooked: Maximum 2 seats per registration""], ""timestamp"": ""<timestamp>""}","Registration rejected due to invalid seats count","",""
+"SMK-018","Vehicle Not Found","Verify system handles non-existent vehicle ID","System is running","1. Send GET request to /api/vehicles/99999
+2. Verify response status code
+3. Check error message","Path Parameter: id=99999","HTTP Status: 404
+Response contains: {""status"": 404, ""message"": ""Vehicle not found with id: 99999"", ""errors"": [""Vehicle not found with id: 99999""], ""timestamp"": ""<timestamp>""}","404 error returned for non-existent vehicle","",""
+"SMK-019","Seminar Not Found","Verify system handles non-existent seminar ID","User logged in","1. Send POST request to /api/seminars/99999/register with Authorization header
+2. Verify response status code
+3. Check error message","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: seminarId=99999
+Request Body: {""seatsBooked"": 1}","HTTP Status: 404
+Response contains: {""status"": 404, ""message"": ""Seminar not found with id: 99999"", ""errors"": [""Seminar not found with id: 99999""], ""timestamp"": ""<timestamp>""}","404 error returned for non-existent seminar","",""
+"SMK-020","Expired OTP Verification","Verify system rejects expired OTP codes","User registered, OTP expired (>10 minutes old)","1. Send POST request to /api/auth/verify-email with expired OTP
+2. Verify response status code
+3. Check error message","Request Body: {""email"": ""john.doe@test.com"", ""otpCode"": ""123456""}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Verification code has expired. Please register again."", ""errors"": [""Verification code has expired. Please register again.""], ""timestamp"": ""<timestamp>""}","Verification rejected due to expired OTP","",""
+"SMK-021","Login Before Email Verification","Verify system prevents login for unverified users","User registered but email not verified","1. Send POST request to /api/auth/login with valid credentials
+2. Verify response status code
+3. Check error message","Request Body: {""email"": ""unverified@test.com"", ""password"": ""password123""}","HTTP Status: 401
+Response contains: {""status"": 401, ""message"": ""Please verify your email before logging in"", ""errors"": [""Please verify your email before logging in""], ""timestamp"": ""<timestamp>""}","Login rejected for unverified user","",""
+"SMK-022","Duplicate Email Registration","Verify system prevents duplicate email registration","User already registered and verified with email","1. Send POST request to /api/auth/register with existing verified email
+2. Verify response status code
+3. Check error message","Request Body: {""name"": ""Jane Doe"", ""telephone"": ""+852 9999 8888"", ""email"": ""john.doe@test.com"", ""password"": ""password456"", ""customerType"": ""COMPANY""}","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Email already registered and verified. Please login."", ""errors"": [""Email already registered and verified. Please login.""], ""timestamp"": ""<timestamp>""}","Registration rejected due to duplicate email","",""
+"SMK-023","Waitlist Registration","Verify user is waitlisted when seminar is full","User logged in, seminar has no available seats","1. Send POST request to /api/seminars/{seminarId}/register with Authorization header
+2. Verify response status code
+3. Check registration status is WAIT","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: seminarId=<full_seminar_id>
+Request Body: {""seatsBooked"": 1}","HTTP Status: 200
+Response contains: {""id"": <reg_id>, ""seminarId"": <sem_id>, ""vehicleModelNumber"": ""<model>"", ""seminarDate"": ""<date>"", ""seatsBooked"": 1, ""status"": ""WAIT"", ""createdAt"": ""<timestamp>"", ""updatedAt"": ""<timestamp>""}","Registration created with WAIT status, no seats deducted","",""
+"SMK-024","Cancel Already Cancelled Registration","Verify system prevents cancelling already cancelled registration","User logged in, has registration with CANCEL status","1. Send PUT request to /api/registrations/{id}/cancel with Authorization header
+2. Verify response status code
+3. Check error message","Authorization Header: Bearer <valid_jwt_token>
+Path Parameter: id=<cancelled_registration_id>","HTTP Status: 400
+Response contains: {""status"": 400, ""message"": ""Registration is already cancelled"", ""errors"": [""Registration is already cancelled""], ""timestamp"": ""<timestamp>""}","Cancellation rejected for already cancelled registration","",""
+"SMK-025","JWT Token Expiration","Verify system rejects expired JWT tokens","User has JWT token that expired (>24 hours old)","1. Send GET request to /api/users/profile with expired JWT token
+2. Verify response status code
+3. Check error message","Authorization Header: Bearer <expired_jwt_token>","HTTP Status: 401
+Response contains: {""status"": 401, ""message"": ""Invalid or expired token"", ""errors"": [""Invalid or expired token""], ""timestamp"": ""<timestamp>""}","Access denied due to expired token","",""
