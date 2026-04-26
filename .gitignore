@@ -43,3 +43,6 @@ replay_pid*
 # Runtime caches
 .cache/
 .vite/
+
+#documentation
+~$*
