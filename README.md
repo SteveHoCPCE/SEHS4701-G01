@@ -257,6 +257,9 @@ DB_USERNAME=root
 DB_PASSWORD=your_mysql_password
 ```
 
+If .env is unavlible, please edit it in backend\src\main\resources\application.yml manually.
+
+
 Use a Gmail **App Password**, not your normal Google password. If MySQL root has a password, set `DB_PASSWORD` in the same file.
 
 ### 3. Run the backend
