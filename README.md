@@ -43,15 +43,25 @@ platform. Built with **Spring Boot + MySQL** (backend) and **React + Vite**
 
 ## Application Screenshots
 
-*(It is recommended to add your application screenshots here to showcase the UI, for example:)*
-*   Home Page
-*   EV Catalog
-*   Login / Register Page
-*   My Registrations Dashboard
+<details>
+<summary>Click to view screenshots</summary>
+
+**Home Page (Authenticated)**
+![Home Page](Screenshot/Mainpage-Sign-In.png)
+
+**Seminar Registration**
+![Seminars](Screenshot/Seminars.png)
+
+**My Registrations Dashboard**
+![Dashboard](Screenshot/Dashboard.png)
+</details>
 
 ---
 
 ## Project Structure
+
+<details>
+<summary>Click to view project structure</summary>
 
 ```
 SEHS4701-G01
@@ -195,7 +205,7 @@ SEHS4701-G01
 │               └── VerificationPage.jsx
 └── Screenshot
 ```
-
+</details>
 ---
 
 ## Prerequisites
@@ -204,7 +214,7 @@ SEHS4701-G01
 | ------- | -------------- | ------------------------------------------------------------------------------------------ |
 | Java    | **17** (exact) | [JDK 17](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)     |
 | Maven   | 3.x            | [maven.apache.org](https://maven.apache.org/download.cgi) · [Video](https://www.youtube.com/watch?v=cIneTHgkrQw) |
-| Node.js | 18+            |                                                                                            |
+| Node.js | 18+            | [nodejs.org](https://nodejs.org/)                                                          |
 | MySQL   | 8.x            | via **XAMPP** (Windows) or `brew` (macOS)                                                  |
 | Git     | any            |                                                                                            |
 
@@ -257,7 +267,7 @@ DB_USERNAME=root
 DB_PASSWORD=your_mysql_password
 ```
 
-If .env is unavlible, please edit it in backend\src\main\resources\application.yml manually.
+**If `.env` is unavailable**, please edit the configuration in `backend/src/main/resources/application.yml` manually.
 
 
 Use a Gmail **App Password**, not your normal Google password. If MySQL root has a password, set `DB_PASSWORD` in the same file.
@@ -412,10 +422,13 @@ SELECT 'Email verifications left:'  AS info, COUNT(*) FROM email_verification;
 ```sql
 USE sehs4701;
 
-DELETE FROM email_verification
-  WHERE customer_id IN (SELECT id FROM customer WHERE email = 'your_google_email');
+DELETE FROM registration
+  WHERE customer_id IN (SELECT id FROM customer WHERE email = 'your_google_email@gmail.com');
 
-DELETE FROM customer WHERE email = 'your_google_email';
+DELETE FROM email_verification
+  WHERE customer_id IN (SELECT id FROM customer WHERE email = 'your_google_email@gmail.com');
+
+DELETE FROM customer WHERE email = 'your_google_email@gmail.com';
 
 SELECT 'User deleted successfully' AS result;
 ```
